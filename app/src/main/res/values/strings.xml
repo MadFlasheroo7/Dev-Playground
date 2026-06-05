@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Dev Controls</string>
+    <string name="widget_description">Dev Controls quick toggles</string>
+    <string name="widget_label">Dev Controls</string>
+    <string name="kiosk_a11y_summary">Bounces back to your Kiosk target when you swipe home</string>
+    <string name="kiosk_a11y_description">When Kiosk Mode is active, this service relaunches the chosen target app whenever the launcher or another app comes to the foreground. Used as a workaround on devices where the standard OS Screen Pinning UI is unavailable.</string>
+</resources>
