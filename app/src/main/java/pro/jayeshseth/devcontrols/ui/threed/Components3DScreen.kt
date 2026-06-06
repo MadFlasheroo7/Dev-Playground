@@ -45,11 +45,13 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -69,7 +71,9 @@ fun Components3DScreen(onBack: () -> Unit) {
             Label("Rotary knob"); Knob3D(tactile); Spacer(Modifier.height(28.dp))
             Label("Physical toggle"); Toggle3D(tactile); Spacer(Modifier.height(28.dp))
             Label("Depth slider"); DepthSlider3D(tactile); Spacer(Modifier.height(28.dp))
-            Label("Liquid fill (hold)"); LiquidFillButton(tactile); Spacer(Modifier.height(20.dp))
+            Label("Liquid fill (hold)"); LiquidFillButton(tactile); Spacer(Modifier.height(28.dp))
+            Label("Joystick"); Joystick3D(tactile); Spacer(Modifier.height(28.dp))
+            Label("Jelly button"); JellyButton3D(tactile); Spacer(Modifier.height(20.dp))
         }
     }
 }
@@ -222,6 +226,76 @@ private fun LiquidFillButton(tactile: Tactile) {
             },
         contentAlignment = Alignment.Center
     ) { Text("HOLD", color = Color.White, style = MaterialTheme.typography.titleMedium) }
+}
+
+@Composable
+private fun Joystick3D(tactile: Tactile) {
+    val ax = remember { Animatable(0f) }
+    val ay = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var atEdge by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(190.dp)
+                .pointerInput(Unit) {
+                    val maxR = size.width / 2f * 0.62f
+                    detectDragGestures(
+                        onDrag = { change, _ ->
+                            change.consume()
+                            var dx = change.position.x - size.width / 2f
+                            var dy = change.position.y - size.height / 2f
+                            val len = hypot(dx, dy)
+                            if (len > maxR) { dx = dx / len * maxR; dy = dy / len * maxR }
+                            val nowEdge = len >= maxR * 0.97f
+                            if (nowEdge && !atEdge) tactile.detent()
+                            atEdge = nowEdge
+                            scope.launch { ax.snapTo(dx) }; scope.launch { ay.snapTo(dy) }
+                        },
+                        onDragEnd = { atEdge = false; tactile.release(); scope.launch { ax.animateTo(0f, spring(Spring.DampingRatioMediumBouncy)) }; scope.launch { ay.animateTo(0f, spring(Spring.DampingRatioMediumBouncy)) } }
+                    )
+                }
+                .drawBehind {
+                    val c = Offset(size.width / 2, size.height / 2); val socket = size.minDimension / 2 * 0.92f
+                    // recessed socket
+                    drawCircle(Color(0xFF0C0E16), socket, c)
+                    drawCircle(Brush.radialGradient(listOf(Color(0xFF1A1E2A), Color(0xFF05060B)), center = c, radius = socket), socket, c)
+                    drawCircle(Color(0x33FFFFFF), socket, c, style = Stroke(2f))
+                    // stick base shadow + ball
+                    val ball = Offset(c.x + ax.value, c.y + ay.value); val br = socket * 0.42f
+                    drawCircle(Color(0x66000000), br, Offset(ball.x, ball.y + 6))
+                    drawCircle(Brush.radialGradient(listOf(Color(0xFF7E8AA8), Color(0xFF2C3242)), center = Offset(ball.x - br * 0.35f, ball.y - br * 0.35f), radius = br * 1.5f), br, ball)
+                    drawCircle(Color(0x55FFFFFF), br, ball, style = Stroke(2f))
+                }
+        )
+    }
+}
+
+@Composable
+private fun JellyButton3D(tactile: Tactile) {
+    val squash = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(190.dp, 100.dp)
+                .graphicsLayer {
+                    val s = squash.value
+                    scaleX = 1f + s * 0.16f; scaleY = 1f - s * 0.22f
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onPress = {
+                        tactile.pressDown(1f); scope.launch { squash.animateTo(1f, tween(80)) }
+                        tryAwaitRelease()
+                        tactile.release(); scope.launch { squash.animateTo(0f, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow)) }
+                    })
+                }
+                .drawBehind {
+                    drawRoundRect(Brush.verticalGradient(listOf(Color(0xFFFF6CC4), Color(0xFFB02A8A))), cornerRadius = cr(size.height / 2))
+                    drawRoundRect(Color(0x55FFFFFF), topLeft = Offset(size.width * 0.12f, size.height * 0.14f), size = Size(size.width * 0.4f, size.height * 0.22f), cornerRadius = cr(size.height / 4))
+                },
+            contentAlignment = Alignment.Center
+        ) { Text("BOING", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+    }
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.cr(r: Float) = androidx.compose.ui.geometry.CornerRadius(r, r)
