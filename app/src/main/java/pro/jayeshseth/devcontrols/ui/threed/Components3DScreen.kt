@@ -190,7 +190,7 @@ private fun LiquidFillButton(tactile: Tactile) {
     val fill = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     var phase by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) { while (true) { withFrameNanos { phase += 0.09f } } }
+    LaunchedEffect(Unit) { while (true) { withFrameNanos { phase += 0.032f } } }
     Box(
         Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF12141C))
             .pointerInput(Unit) {
@@ -210,15 +210,15 @@ private fun LiquidFillButton(tactile: Tactile) {
                     while (x <= size.width) { path.lineTo(x, base + sin(x * k + ph) * amp); x += 8f }
                     path.lineTo(size.width, size.height); path.close(); return path
                 }
-                // back liquid layer
-                drawPath(wave(9f, 0.022f, phase * 0.7f, level + 7f),
+                // back liquid layer (big slow swell)
+                drawPath(wave(22f, 0.011f, phase * 0.7f, level + 12f),
                     Brush.verticalGradient(listOf(Color(0xFF2BE0FF), Color(0xFF1230B0)), startY = level, endY = size.height), alpha = 0.55f)
-                // front liquid layer
-                drawPath(wave(14f, 0.03f, phase, level),
+                // front liquid layer (bigger, slower gloop)
+                drawPath(wave(32f, 0.015f, phase, level),
                     Brush.verticalGradient(listOf(Color(0xFF7CF8FF), Color(0xFF143ED0)), startY = level, endY = size.height))
-                // surface shimmer
+                // surface shimmer riding the big wave
                 var x = 0f
-                while (x <= size.width) { val y = level + sin(x * 0.03f + phase) * 14f; drawCircle(Color(0x66FFFFFF), 1.6f, Offset(x, y)); x += 16f }
+                while (x <= size.width) { val y = level + sin(x * 0.015f + phase) * 32f; drawCircle(Color(0x66FFFFFF), 1.8f, Offset(x, y)); x += 18f }
             },
         contentAlignment = Alignment.Center
     ) { Text("HOLD", color = Color.White, style = MaterialTheme.typography.titleMedium) }

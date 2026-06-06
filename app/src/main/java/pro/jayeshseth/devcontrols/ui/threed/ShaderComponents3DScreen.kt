@@ -95,11 +95,11 @@ uniform float press;
 half4 main(float2 fragCoord) {
     float2 uv = fragCoord / iResolution;
     float fillTop = 1.0 - press;
-    float wave = sin(uv.x * 14.0 + iTime * 2.0) * 0.022 + sin(uv.x * 23.0 - iTime * 1.3) * 0.013;
+    float wave = sin(uv.x * 5.5 + iTime * 0.8) * 0.055 + sin(uv.x * 9.0 - iTime * 0.5) * 0.03;
     float surf = fillTop + wave;
     if (uv.y < surf) return half4(0.07, 0.08, 0.11, 1.0);
     float depth = clamp((uv.y - surf) / max(press, 0.001), 0.0, 1.0);
-    float flow = sin(uv.x * 8.0 + iTime * 1.5 + uv.y * 6.0) * 0.5 + 0.5;
+    float flow = sin(uv.x * 4.0 + iTime * 0.7 + uv.y * 3.5) * 0.5 + 0.5;
     half3 top = half3(0.45, 0.97, 1.0);
     half3 bot = half3(0.07, 0.18, 0.7);
     half3 col = mix(top, bot, half(depth)) + half(flow * 0.07);
