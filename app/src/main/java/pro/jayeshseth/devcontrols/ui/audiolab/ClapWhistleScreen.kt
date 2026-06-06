@@ -47,7 +47,7 @@ import pro.jayeshseth.devcontrols.util.fft
 import kotlin.math.cos
 import kotlin.math.sqrt
 
-private const val N = 2048
+private const val N = 1024
 
 /** Clap & whistle detector — counts sharp broadband transients (claps) and sustained tones (whistles). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,8 +100,8 @@ private fun Detector() {
                 while (isActive) {
                     var off = 0
                     while (off < N) { val n = record.read(buf, off, N - off); if (n <= 0) break; off += n }
-                    var sumSq = 0.0
-                    for (i in 0 until N) { val s = buf[i] / 32768f; sumSq += s * s; re[i] = s * window[i]; im[i] = 0f }
+                    var sumSq = 0.0; var peak = 0f
+                    for (i in 0 until N) { val s = buf[i] / 32768f; sumSq += s * s; val a = if (s < 0) -s else s; if (a > peak) peak = a; re[i] = s * window[i]; im[i] = 0f }
                     val rms = sqrt(sumSq / N).toFloat()
                     fft(re, im)
                     val half = N / 2
@@ -116,13 +116,14 @@ private fun Detector() {
                     }
                     val peakFreq = peakBin * binHz
                     val tonality = peakMag / totalMag   // high = pure tone (whistle), low = broadband (clap)
-                    ambient = ambient * 0.97f + rms * 0.03f
+                    ambient = ambient * 0.97f + peak * 0.03f
 
-                    level = rms; freq = if (tonality > 0.2f) peakFreq else 0f
+                    level = peak; freq = if (tonality > 0.2f) peakFreq else 0f
                     frame++
 
-                    val clapThresh = 0.05f + (1f - sens) * 0.18f
-                    val isClap = rms > clapThresh && rms > ambient * 4f && tonality < 0.35f && (frame - lastClapFrame) > 8
+                    // Claps are short loud TRANSIENTS → detect by peak amplitude, not averaged RMS.
+                    val clapThresh = 0.12f + (1f - sens) * 0.4f
+                    val isClap = peak > clapThresh && peak > ambient * 2.5f && tonality < 0.6f && (frame - lastClapFrame) > 5
                     if (isClap) { claps++; lastClapFrame = frame }
 
                     val tonalThresh = 0.32f - sens * 0.12f
@@ -150,7 +151,7 @@ private fun Detector() {
         Spacer(Modifier.height(8.dp))
         // level meter
         Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF2A2A38))) {
-            Box(Modifier.fillMaxWidth((level * 6f).coerceIn(0f, 1f)).height(16.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF7CF8FF)))
+            Box(Modifier.fillMaxWidth((level * 1.3f).coerceIn(0f, 1f)).height(16.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF7CF8FF)))
         }
         Spacer(Modifier.height(24.dp))
         Text("Sensitivity", style = MaterialTheme.typography.labelMedium)
