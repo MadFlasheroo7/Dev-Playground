@@ -51,6 +51,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pro.jayeshseth.devcontrols.util.AdbDetection
 
+/** ADB detection — surfaces whether USB/wireless debugging is exposed (defensive self-test). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdbDetectionScreen(onBack: () -> Unit) {

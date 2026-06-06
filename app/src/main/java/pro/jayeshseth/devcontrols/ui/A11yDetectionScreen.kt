@@ -49,6 +49,7 @@ import kotlinx.coroutines.withContext
 import pro.jayeshseth.devcontrols.util.A11yDetection
 import pro.jayeshseth.devcontrols.util.AdbDetection
 
+/** Accessibility detection — shows what an a11y service could scrape (defensive self-test). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun A11yDetectionScreen(onBack: () -> Unit) {

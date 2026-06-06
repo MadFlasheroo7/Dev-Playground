@@ -74,6 +74,7 @@ private data class AppopRow(
     val mode: Int,
 )
 
+/** adb_pm — grant/revoke runtime permissions and appops per app via the self-ADB connection. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionManagerScreen(onBack: () -> Unit) {

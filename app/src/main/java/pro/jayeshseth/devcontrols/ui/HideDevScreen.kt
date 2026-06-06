@@ -47,6 +47,7 @@ import pro.jayeshseth.devcontrols.kiosk.KioskAccessibilityService
 import pro.jayeshseth.devcontrols.util.AppEntry
 import pro.jayeshseth.devcontrols.util.InstalledApps
 
+/** Hide developer-options / ADB state from a chosen app (anti-detection self-test). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HideDevScreen(onBack: () -> Unit) {

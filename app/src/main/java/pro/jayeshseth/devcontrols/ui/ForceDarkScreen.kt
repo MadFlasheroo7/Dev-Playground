@@ -47,6 +47,7 @@ import pro.jayeshseth.devcontrols.kiosk.KioskAccessibilityService
 import pro.jayeshseth.devcontrols.util.AppEntry
 import pro.jayeshseth.devcontrols.util.InstalledApps
 
+/** Force per-app dark mode via self-ADB settings. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForceDarkScreen(onBack: () -> Unit) {

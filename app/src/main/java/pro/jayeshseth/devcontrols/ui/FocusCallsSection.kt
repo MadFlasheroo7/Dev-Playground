@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import pro.jayeshseth.devcontrols.data.FocusCallsPrefs
 import pro.jayeshseth.devcontrols.util.ForegroundAppDetector
 
+/** Focus Calls panel section: manage the allow-list of apps whose incoming calls bypass kiosk/DND blocking. */
 @Composable
 fun FocusCallsSection(onManageAllowList: () -> Unit) {
     val context = LocalContext.current

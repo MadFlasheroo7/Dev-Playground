@@ -72,6 +72,7 @@ private data class SectionResult(
     val durationMs: Long,
 )
 
+/** App info dump — build/version/permission/signature details for a chosen package. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InfoDumpScreen(onBack: () -> Unit) {

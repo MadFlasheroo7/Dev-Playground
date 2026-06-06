@@ -38,6 +38,7 @@ enum class LineType {
     COMMAND, STDOUT, STDERR, SYSTEM
 }
 
+/** adb_g — local on-device shell console (sh / su) for running commands. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdbConsoleScreen(onBack: () -> Unit) {

@@ -52,6 +52,7 @@ import pro.jayeshseth.devcontrols.util.AppEntry
 import pro.jayeshseth.devcontrols.util.ForegroundAppDetector
 import pro.jayeshseth.devcontrols.util.InstalledApps
 
+/** Accessibility cloak — hide sensitive views from accessibility scraping. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun A11yCloakScreen(onBack: () -> Unit) {

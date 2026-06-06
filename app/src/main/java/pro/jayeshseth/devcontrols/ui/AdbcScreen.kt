@@ -70,6 +70,7 @@ import pro.jayeshseth.devcontrols.data.AdbConsolePrefs
 private data class AdbcLine(val text: String, val type: AdbcLineType)
 private enum class AdbcLineType { COMMAND, STDOUT, STDERR, SYSTEM }
 
+/** adb_c — wireless ADB shell over loopback running as UID 2000 after a one-time pairing. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdbcScreen(onBack: () -> Unit) {

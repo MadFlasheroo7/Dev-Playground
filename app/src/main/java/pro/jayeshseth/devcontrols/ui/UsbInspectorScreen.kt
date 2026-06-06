@@ -47,6 +47,7 @@ import pro.jayeshseth.devcontrols.usb.UsbDeviceInfo
 import pro.jayeshseth.devcontrols.usb.UsbInspector
 import pro.jayeshseth.devcontrols.usb.UsbPowerProfile
 
+/** USB inspector — lists connected USB devices and their descriptors. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsbInspectorScreen(onBack: () -> Unit) {

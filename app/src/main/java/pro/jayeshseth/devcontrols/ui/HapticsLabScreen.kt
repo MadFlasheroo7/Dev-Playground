@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import pro.jayeshseth.devcontrols.haptics.HapticsEngine
 import pro.jayeshseth.devcontrols.haptics.HapticsPresets
 
+/** Haptics lab — fire every VibrationEffect / predefined effect / composition primitive. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HapticsLabScreen(onBack: () -> Unit) {

@@ -36,6 +36,7 @@ import pro.jayeshseth.devcontrols.data.KioskPrefs
 import pro.jayeshseth.devcontrols.util.AppEntry
 import pro.jayeshseth.devcontrols.util.InstalledApps
 
+/** Picks the target app to lock into Kiosk mode. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KioskTargetPickerScreen(onBack: () -> Unit) {

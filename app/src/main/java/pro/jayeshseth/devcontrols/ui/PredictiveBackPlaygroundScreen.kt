@@ -66,6 +66,7 @@ private data class BackLog(
     val edge: Int?,
 )
 
+/** Predictive-back gesture playground (Android 14 back preview). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PredictiveBackPlaygroundScreen(onBack: () -> Unit) {

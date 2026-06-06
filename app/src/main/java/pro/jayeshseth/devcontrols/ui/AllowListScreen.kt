@@ -35,6 +35,7 @@ import pro.jayeshseth.devcontrols.data.FocusCallsPrefs
 import pro.jayeshseth.devcontrols.util.AppEntry
 import pro.jayeshseth.devcontrols.util.InstalledApps
 
+/** Manages the Focus Calls allow-list of packages. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllowListScreen(onBack: () -> Unit) {
