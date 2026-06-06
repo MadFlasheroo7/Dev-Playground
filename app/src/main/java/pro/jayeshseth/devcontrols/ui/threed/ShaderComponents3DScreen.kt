@@ -24,13 +24,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -83,6 +88,26 @@ half4 main(float2 fragCoord) {
 }
 """
 
+private const val LIQUID_AGSL = """
+uniform float2 iResolution;
+uniform float iTime;
+uniform float press;
+half4 main(float2 fragCoord) {
+    float2 uv = fragCoord / iResolution;
+    float fillTop = 1.0 - press;
+    float wave = sin(uv.x * 14.0 + iTime * 2.0) * 0.022 + sin(uv.x * 23.0 - iTime * 1.3) * 0.013;
+    float surf = fillTop + wave;
+    if (uv.y < surf) return half4(0.07, 0.08, 0.11, 1.0);
+    float depth = clamp((uv.y - surf) / max(press, 0.001), 0.0, 1.0);
+    float flow = sin(uv.x * 8.0 + iTime * 1.5 + uv.y * 6.0) * 0.5 + 0.5;
+    half3 top = half3(0.45, 0.97, 1.0);
+    half3 bot = half3(0.07, 0.18, 0.7);
+    half3 col = mix(top, bot, half(depth)) + half(flow * 0.07);
+    col += half(smoothstep(0.02, 0.0, uv.y - surf) * 0.7);
+    return half4(col, 1.0);
+}
+"""
+
 /** 3D tactile components rendered with AGSL lighting — real normals/specular + depth feedback. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,6 +130,10 @@ fun ShaderComponents3DScreen(onBack: () -> Unit) {
             Text("Embossed panel", color = Color(0xFFC8CEE0), style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(8.dp))
             EmbossPanel(tactile)
+            Spacer(Modifier.height(28.dp))
+            Text("Liquid fill (hold)", color = Color(0xFFC8CEE0), style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            LiquidFillShader(tactile)
         }
     }
 }
@@ -132,6 +161,31 @@ private fun OrbButton(tactile: Tactile) {
                 }
         )
     }
+}
+
+@Composable
+private fun LiquidFillShader(tactile: Tactile) {
+    val shader = remember { RuntimeShader(LIQUID_AGSL) }
+    val brush = remember { ShaderBrush(shader) }
+    val press = remember { Animatable(0f) }
+    var time by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { var s = 0L; while (true) { withFrameNanos { if (s == 0L) s = it; time = (it - s) / 1e9f } } }
+    Box(
+        Modifier.fillMaxWidth().height(130.dp).clip(RoundedCornerShape(22.dp))
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    tactile.pressDown(1f); scope.launch { press.animateTo(1f, tween(480)) }
+                    tryAwaitRelease()
+                    tactile.release(); scope.launch { press.animateTo(0f, tween(620)) }
+                })
+            }
+            .drawWithCache {
+                shader.setFloatUniform("iResolution", size.width, size.height)
+                onDrawBehind { shader.setFloatUniform("iTime", time); shader.setFloatUniform("press", press.value); drawRect(brush) }
+            },
+        contentAlignment = Alignment.Center
+    ) { Text("HOLD", color = Color.White, style = MaterialTheme.typography.titleMedium) }
 }
 
 @Composable

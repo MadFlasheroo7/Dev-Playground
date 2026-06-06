@@ -39,7 +39,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -63,7 +68,8 @@ fun Components3DScreen(onBack: () -> Unit) {
             Label("Push button"); PushButton3D(tactile); Spacer(Modifier.height(28.dp))
             Label("Rotary knob"); Knob3D(tactile); Spacer(Modifier.height(28.dp))
             Label("Physical toggle"); Toggle3D(tactile); Spacer(Modifier.height(28.dp))
-            Label("Depth slider"); DepthSlider3D(tactile); Spacer(Modifier.height(20.dp))
+            Label("Depth slider"); DepthSlider3D(tactile); Spacer(Modifier.height(28.dp))
+            Label("Liquid fill (hold)"); LiquidFillButton(tactile); Spacer(Modifier.height(20.dp))
         }
     }
 }
@@ -177,6 +183,45 @@ private fun DepthSlider3D(tactile: Tactile) {
                 drawCircle(Brush.radialGradient(listOf(Color(0xFFF2F4FA), Color(0xFFAEB6C8)), center = Offset(fx - 7, cy - 7), radius = 34f), 20f, Offset(fx, cy))
             }
     )
+}
+
+@Composable
+private fun LiquidFillButton(tactile: Tactile) {
+    val fill = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var phase by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) { while (true) { withFrameNanos { phase += 0.09f } } }
+    Box(
+        Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFF12141C))
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    tactile.pressDown(1f); scope.launch { fill.animateTo(1f, tween(480)) }
+                    tryAwaitRelease()
+                    tactile.release(); scope.launch { fill.animateTo(0f, tween(620)) }
+                })
+            }
+            .drawBehind {
+                val f = fill.value
+                if (f <= 0.001f) return@drawBehind
+                val level = size.height * (1f - f)
+                fun wave(amp: Float, k: Float, ph: Float, base: Float): Path {
+                    val path = Path(); path.moveTo(0f, size.height); path.lineTo(0f, base)
+                    var x = 0f
+                    while (x <= size.width) { path.lineTo(x, base + sin(x * k + ph) * amp); x += 8f }
+                    path.lineTo(size.width, size.height); path.close(); return path
+                }
+                // back liquid layer
+                drawPath(wave(9f, 0.022f, phase * 0.7f, level + 7f),
+                    Brush.verticalGradient(listOf(Color(0xFF2BE0FF), Color(0xFF1230B0)), startY = level, endY = size.height), alpha = 0.55f)
+                // front liquid layer
+                drawPath(wave(14f, 0.03f, phase, level),
+                    Brush.verticalGradient(listOf(Color(0xFF7CF8FF), Color(0xFF143ED0)), startY = level, endY = size.height))
+                // surface shimmer
+                var x = 0f
+                while (x <= size.width) { val y = level + sin(x * 0.03f + phase) * 14f; drawCircle(Color(0x66FFFFFF), 1.6f, Offset(x, y)); x += 16f }
+            },
+        contentAlignment = Alignment.Center
+    ) { Text("HOLD", color = Color.White, style = MaterialTheme.typography.titleMedium) }
 }
 
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.cr(r: Float) = androidx.compose.ui.geometry.CornerRadius(r, r)
