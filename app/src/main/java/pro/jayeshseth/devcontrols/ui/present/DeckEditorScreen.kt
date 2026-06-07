@@ -142,7 +142,8 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                 item {
                     OutlinedButton(onClick = {
                         val ns = Slide("s${idSeq++}", listOf(0xFF101225, 0xFF1B1E3A), TransitionIn.FADE, emptyList())
-                        setSlides(deck.slides + ns); current = deck.slides.size; selectedId = null
+                        val newList = deck.slides + ns
+                        setSlides(newList); current = newList.lastIndex; selectedId = null
                     }) { Text("+ Slide") }
                 }
             }
@@ -170,8 +171,9 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                         },
                         onDeleteSlide = if (deck.slides.size > 1) {
                             {
-                                setSlides(deck.slides.filterIndexed { i, _ -> i != current })
-                                current = current.coerceAtMost(deck.slides.size - 2).coerceAtLeast(0)
+                                val newList = deck.slides.filterIndexed { i, _ -> i != current }
+                                setSlides(newList)
+                                current = current.coerceAtMost(newList.lastIndex).coerceAtLeast(0)
                             }
                         } else null,
                         onExportPdf = {
@@ -190,6 +192,15 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                                 exporting = false
                                 if (uris.isNotEmpty()) exported = "image/png" to ArrayList(uris)
                                 else Toast.makeText(ctx, "PNG export failed", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onExportPptx = {
+                            exporting = true
+                            scope.launch {
+                                val uri = withContext(Dispatchers.IO) { DeckExport.exportPptx(ctx, deck) }
+                                exporting = false
+                                if (uri != null) exported = "application/vnd.openxmlformats-officedocument.presentationml.presentation" to arrayListOf(uri)
+                                else Toast.makeText(ctx, "PPTX export failed", Toast.LENGTH_SHORT).show()
                             }
                         },
                         exporting = exporting,
@@ -325,7 +336,7 @@ private fun ElementProps(el: SlideElement, onChange: (SlideElement) -> Unit, onD
 @Composable
 private fun SlideProps(
     slide: Slide, updateSlide: ((Slide) -> Slide) -> Unit, onAdd: (ElementType) -> Unit,
-    onDeleteSlide: (() -> Unit)?, onExportPdf: () -> Unit, onExportPng: () -> Unit, exporting: Boolean,
+    onDeleteSlide: (() -> Unit)?, onExportPdf: () -> Unit, onExportPng: () -> Unit, onExportPptx: () -> Unit, exporting: Boolean,
 ) {
     Text("Add element", style = MaterialTheme.typography.titleMedium)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -355,8 +366,9 @@ private fun SlideProps(
 
     Spacer(Modifier.height(20.dp))
     Text("Export", style = MaterialTheme.typography.titleMedium)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onExportPdf, enabled = !exporting) { Text("Export PDF") }
+        Button(onClick = onExportPptx, enabled = !exporting) { Text("Export PPTX") }
         OutlinedButton(onClick = onExportPng, enabled = !exporting) { Text("Export PNGs") }
     }
     if (exporting) { Spacer(Modifier.height(8.dp)); Text("Exporting…", color = MaterialTheme.colorScheme.onSurfaceVariant) }
