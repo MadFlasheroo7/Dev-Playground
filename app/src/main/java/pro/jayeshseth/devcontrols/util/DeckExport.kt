@@ -17,11 +17,15 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import pro.jayeshseth.devcontrols.ui.present.Deck
 import pro.jayeshseth.devcontrols.ui.present.ElementType
+import pro.jayeshseth.devcontrols.ui.present.Entrance
 import pro.jayeshseth.devcontrols.ui.present.ShapeKind
 import pro.jayeshseth.devcontrols.ui.present.Slide
+import pro.jayeshseth.devcontrols.ui.present.SlideElement
+import pro.jayeshseth.devcontrols.ui.present.TransitionIn
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.math.roundToInt
 
 /**
  * Exports a [Deck] to a multi-page PDF or per-slide PNGs by drawing each slide onto a native
@@ -32,45 +36,64 @@ object DeckExport {
     private const val W = 1920
     private const val H = 1080
 
-    /** Renders one slide to a freshly allocated [Bitmap] at the given size. */
+    /** Renders one complete slide (background + every element) to a freshly allocated [Bitmap]. */
     fun renderSlide(slide: Slide, w: Int = W, h: Int = H): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        drawSlide(Canvas(bmp), slide, w, h)
+        drawSlide(Canvas(bmp), slide, w, h, includeAnimated = true)
         return bmp
     }
 
-    private fun drawSlide(c: Canvas, slide: Slide, w: Int, h: Int) {
-        // background gradient (top-left -> bottom-right)
+    /** Renders just the background gradient + non-animated elements (for the animated PPTX base). */
+    private fun renderBackground(slide: Slide, w: Int = W, h: Int = H): Bitmap {
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        drawSlide(Canvas(bmp), slide, w, h, includeAnimated = false)
+        return bmp
+    }
+
+    /** Renders a single element on a transparent bitmap sized to its bounding box. */
+    private fun renderElement(el: SlideElement, w: Int = W, h: Int = H): Bitmap {
+        val ew = (el.w * w).toInt().coerceAtLeast(1); val eh = (el.h * h).toInt().coerceAtLeast(1)
+        val bmp = Bitmap.createBitmap(ew, eh, Bitmap.Config.ARGB_8888)
+        drawElement(Canvas(bmp), el, w, h, el.x * w, el.y * h)
+        return bmp
+    }
+
+    private fun drawSlide(c: Canvas, slide: Slide, w: Int, h: Int, includeAnimated: Boolean) {
         val cols = slide.bgColors.map { it.toInt() }.let { if (it.size >= 2) it else it + it }
         val bg = Paint().apply {
             shader = LinearGradient(0f, 0f, w.toFloat(), h.toFloat(), cols.toIntArray(), null, Shader.TileMode.CLAMP)
         }
         c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), bg)
-
-        val fontScale = h / 720f
         slide.elements.forEach { el ->
-            val left = el.x * w; val top = el.y * h; val ew = el.w * w; val eh = el.h * h
-            when (el.type) {
-                ElementType.SHAPE -> {
-                    val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = el.colorArgb.toInt() }
-                    val r = RectF(left, top, left + ew, top + eh)
-                    if (el.shape == ShapeKind.CIRCLE) c.drawOval(r, p)
-                    else c.drawRoundRect(r, 18f * fontScale, 18f * fontScale, p)
+            if (!includeAnimated && el.entrance != Entrance.NONE) return@forEach
+            drawElement(c, el, w, h, 0f, 0f)
+        }
+    }
+
+    /** Draws one element. [ox]/[oy] shift the origin (use the element's px offset to draw at 0,0). */
+    private fun drawElement(c: Canvas, el: SlideElement, w: Int, h: Int, ox: Float, oy: Float) {
+        val fontScale = h / 720f
+        val left = el.x * w - ox; val top = el.y * h - oy; val ew = el.w * w; val eh = el.h * h
+        when (el.type) {
+            ElementType.SHAPE -> {
+                val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = el.colorArgb.toInt() }
+                val r = RectF(left, top, left + ew, top + eh)
+                if (el.shape == ShapeKind.CIRCLE) c.drawOval(r, p)
+                else c.drawRoundRect(r, 18f * fontScale, 18f * fontScale, p)
+            }
+            ElementType.BULLETS -> {
+                val tp = textPaint(el.colorArgb.toInt(), el.fontSize * fontScale, el.weight)
+                var y = top
+                el.bullets.forEach { b ->
+                    val lay = layout("•  $b", tp, ew.toInt(), false)
+                    c.save(); c.translate(left, y); lay.draw(c); c.restore()
+                    y += lay.height + 12f * fontScale
                 }
-                ElementType.BULLETS -> {
-                    val tp = textPaint(el.colorArgb.toInt(), el.fontSize * fontScale, el.weight)
-                    var y = top
-                    el.bullets.forEach { b ->
-                        val lay = layout("•  $b", tp, ew.toInt(), false)
-                        c.save(); c.translate(left, y); lay.draw(c); c.restore()
-                        y += lay.height + 12f * fontScale
-                    }
-                }
-                else -> { // TITLE / SUBTITLE / BODY
-                    val tp = textPaint(el.colorArgb.toInt(), el.fontSize * fontScale, el.weight)
-                    val lay = layout(el.text ?: "", tp, ew.toInt(), el.centerAlign)
-                    c.save(); c.translate(left, top + (eh - lay.height) / 2f); lay.draw(c); c.restore()
-                }
+            }
+            else -> { // TITLE / SUBTITLE / BODY
+                val tp = textPaint(el.colorArgb.toInt(), el.fontSize * fontScale, el.weight)
+                val lay = layout(el.text ?: "", tp, ew.toInt(), el.centerAlign)
+                c.save(); c.translate(left, top + (eh - lay.height) / 2f); lay.draw(c); c.restore()
             }
         }
     }
@@ -91,7 +114,7 @@ object DeckExport {
         val doc = PdfDocument()
         deck.slides.forEachIndexed { i, s ->
             val page = doc.startPage(PdfDocument.PageInfo.Builder(W, H, i + 1).create())
-            drawSlide(page.canvas, s, W, H)
+            drawSlide(page.canvas, s, W, H, includeAnimated = true)
             doc.finishPage(page)
         }
         val uri = newDownload(ctx, "${safe(deck.title)}.pdf", "application/pdf") ?: return null
@@ -153,10 +176,15 @@ object DeckExport {
             putStr("ppt/slideLayouts/_rels/slideLayout1.xml.rels", LAYOUT_RELS)
             deck.slides.forEachIndexed { i, s ->
                 val idx = i + 1
-                val png = ByteArrayOutputStream().also { renderSlide(s).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-                put("ppt/media/image$idx.png", png)
-                putStr("ppt/slides/slide$idx.xml", SLIDE_XML)
-                putStr("ppt/slides/_rels/slide$idx.xml.rels", slideRels(idx))
+                // background (gradient + static elements) = image{idx}.png -> rId1, shape id 2
+                put("ppt/media/image$idx.png", png(renderBackground(s)))
+                // each animated element gets its own positioned picture (so it can animate in)
+                val animated = s.elements.filter { it.entrance != Entrance.NONE }
+                animated.forEachIndexed { k, el ->
+                    put("ppt/media/image${idx}_${k + 1}.png", png(renderElement(el)))
+                }
+                putStr("ppt/slides/slide$idx.xml", slideXml(s, animated))
+                putStr("ppt/slides/_rels/slide$idx.xml.rels", slideRels(idx, animated.size))
             }
         }
         val uri = newDownload(ctx, "${safe(deck.title)}.pptx",
@@ -217,9 +245,54 @@ object DeckExport {
 
     private val LAYOUT_RELS = """$XML<Relationships xmlns="$NS_PKG"><Relationship Id="rId1" Type="$RT/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>"""
 
-    private val SLIDE_XML = """$XML<p:sld xmlns:a="$NS_A" xmlns:r="$NS_R" xmlns:p="$NS_P"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr><p:pic><p:nvPicPr><p:cNvPr id="2" name="Slide"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$EMU_W" cy="$EMU_H"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic></p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>"""
+    private fun png(b: Bitmap): ByteArray =
+        ByteArrayOutputStream().also { b.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
 
-    private fun slideRels(idx: Int) = """$XML<Relationships xmlns="$NS_PKG"><Relationship Id="rId1" Type="$RT/image" Target="../media/image$idx.png"/><Relationship Id="rId2" Type="$RT/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>"""
+    private fun slideXml(slide: Slide, animated: List<SlideElement>): String {
+        val pics = StringBuilder()
+        pics.append("""<p:pic><p:nvPicPr><p:cNvPr id="2" name="bg"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$EMU_W" cy="$EMU_H"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>""")
+        animated.forEachIndexed { k, el ->
+            val id = 3 + k; val rid = 2 + k
+            val x = (el.x * EMU_W).roundToInt(); val y = (el.y * EMU_H).roundToInt()
+            val cx = (el.w * EMU_W).roundToInt(); val cy = (el.h * EMU_H).roundToInt()
+            pics.append("""<p:pic><p:nvPicPr><p:cNvPr id="$id" name="el$k"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="rId$rid"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="$x" y="$y"/><a:ext cx="$cx" cy="$cy"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>""")
+        }
+        val spids = animated.indices.map { 3 + it }
+        return """$XML<p:sld xmlns:a="$NS_A" xmlns:r="$NS_R" xmlns:p="$NS_P"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>$pics</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>${transitionXml(slide.transitionIn)}${timingXml(spids)}</p:sld>"""
+    }
+
+    private fun transitionXml(t: TransitionIn) = when (t) {
+        TransitionIn.FADE -> """<p:transition spd="med"><p:fade/></p:transition>"""
+        TransitionIn.PUSH -> """<p:transition spd="med"><p:push dir="l"/></p:transition>"""
+        TransitionIn.ZOOM -> """<p:transition spd="med"><p:zoom dir="in"/></p:transition>"""
+        TransitionIn.NONE -> ""
+    }
+
+    /** Auto-cascading fade-in build for every animated element (style.visibility + fade). */
+    private fun timingXml(spids: List<Int>): String {
+        if (spids.isEmpty()) return ""
+        val effects = StringBuilder()
+        spids.forEachIndexed { j, spid ->
+            val e = 5 + j * 3
+            val delay = if (j == 0) 0 else 200
+            effects.append(
+                """<p:par><p:cTn id="$e" presetID="10" presetClass="entr" presetSubtype="0" fill="hold" grpId="0" nodeType="afterEffect"><p:stCondLst><p:cond delay="$delay"/></p:stCondLst><p:childTnLst>""" +
+                """<p:set><p:cBhvr><p:cTn id="${e + 1}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn><p:tgtEl><p:spTgt spid="$spid"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr><p:to><p:strVal val="visible"/></p:to></p:set>""" +
+                """<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="${e + 2}" dur="400"/><p:tgtEl><p:spTgt spid="$spid"/></p:tgtEl></p:cBhvr></p:animEffect>""" +
+                """</p:childTnLst></p:cTn></p:par>"""
+            )
+        }
+        val builds = spids.joinToString("") { """<p:bldP spid="$it" grpId="0"/>""" }
+        return """<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst><p:par><p:cTn id="3" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst><p:par><p:cTn id="4" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>$effects</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn><p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst><p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq></p:childTnLst></p:cTn></p:par></p:tnLst><p:bldLst>$builds</p:bldLst></p:timing>"""
+    }
+
+    private fun slideRels(idx: Int, count: Int) = buildString {
+        append("""$XML<Relationships xmlns="$NS_PKG">""")
+        append("""<Relationship Id="rId1" Type="$RT/image" Target="../media/image$idx.png"/>""")
+        for (k in 0 until count) append("""<Relationship Id="rId${2 + k}" Type="$RT/image" Target="../media/image${idx}_${k + 1}.png"/>""")
+        append("""<Relationship Id="rId${2 + count}" Type="$RT/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>""")
+        append("</Relationships>")
+    }
 
     private val THEME = """$XML<a:theme xmlns:a="$NS_A" name="Office Theme"><a:themeElements><a:clrScheme name="Office"><a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1><a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="44546A"/></a:dk2><a:lt2><a:srgbClr val="E7E6E6"/></a:lt2><a:accent1><a:srgbClr val="4472C4"/></a:accent1><a:accent2><a:srgbClr val="ED7D31"/></a:accent2><a:accent3><a:srgbClr val="A5A5A5"/></a:accent3><a:accent4><a:srgbClr val="FFC000"/></a:accent4><a:accent5><a:srgbClr val="5B9BD5"/></a:accent5><a:accent6><a:srgbClr val="70AD47"/></a:accent6><a:hlink><a:srgbClr val="0563C1"/></a:hlink><a:folHlink><a:srgbClr val="954F72"/></a:folHlink></a:clrScheme><a:fontScheme name="Office"><a:majorFont><a:latin typeface="Calibri Light"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont><a:minorFont><a:latin typeface="Calibri"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont></a:fontScheme><a:fmtScheme name="Office"><a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst><a:lnStyleLst><a:ln w="6350" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="12700" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln><a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements></a:theme>"""
 }
