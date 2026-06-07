@@ -39,11 +39,11 @@ import androidx.compose.ui.unit.dp
 /** Present mode — full-screen deck with per-slide transitions and shared-element morphs. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun PresentScreen(onBack: () -> Unit) {
-    val deck = remember { sampleDeck() }
+fun PresentScreen(onBack: () -> Unit, deck: Deck = sampleDeck()) {
     var index by remember { mutableIntStateOf(0) }
     fun go(d: Int) { index = (index + d).coerceIn(0, deck.slides.lastIndex) }
     BackHandler { onBack() }
+    LockLandscape()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         SharedTransitionLayout(Modifier.fillMaxSize()) {
@@ -91,6 +91,20 @@ fun PresentScreen(onBack: () -> Unit) {
 }
 
 private typealias AnimatedContentTransitionScopeDir = androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+
+/** Forces landscape while composed; restores the previous orientation on exit. */
+@Composable
+fun LockLandscape() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        var c = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        val activity = c as? android.app.Activity
+        val prev = activity?.requestedOrientation
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onDispose { if (prev != null) activity.requestedOrientation = prev }
+    }
+}
 
 private fun Modifier.noRippleClick(onClick: () -> Unit): Modifier = this.then(
     Modifier.clickable(interactionSource = MutableInteractionSource(), indication = null, onClick = onClick)
