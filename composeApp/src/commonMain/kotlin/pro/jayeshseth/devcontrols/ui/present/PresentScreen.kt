@@ -1,6 +1,5 @@
 package pro.jayeshseth.devcontrols.ui.present
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -35,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import pro.jayeshseth.devcontrols.BackHandlerCommon
+import pro.jayeshseth.devcontrols.platform.LockLandscape
 
 /** Present mode — full-screen deck with per-slide transitions and shared-element morphs. */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -42,7 +43,7 @@ import androidx.compose.ui.unit.dp
 fun PresentScreen(onBack: () -> Unit, deck: Deck = sampleDeck()) {
     var index by remember { mutableIntStateOf(0) }
     fun go(d: Int) { index = (index + d).coerceIn(0, deck.slides.lastIndex) }
-    BackHandler { onBack() }
+    BackHandlerCommon(enabled = true) { onBack() }
     LockLandscape()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -91,20 +92,6 @@ fun PresentScreen(onBack: () -> Unit, deck: Deck = sampleDeck()) {
 }
 
 private typealias AnimatedContentTransitionScopeDir = androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
-
-/** Forces landscape while composed; restores the previous orientation on exit. */
-@Composable
-fun LockLandscape() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        var c = ctx
-        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
-        val activity = c as? android.app.Activity
-        val prev = activity?.requestedOrientation
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose { if (prev != null) activity.requestedOrientation = prev }
-    }
-}
 
 private fun Modifier.noRippleClick(onClick: () -> Unit): Modifier = this.then(
     Modifier.clickable(interactionSource = MutableInteractionSource(), indication = null, onClick = onClick)

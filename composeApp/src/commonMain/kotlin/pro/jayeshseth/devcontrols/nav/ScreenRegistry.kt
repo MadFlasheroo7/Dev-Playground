@@ -32,6 +32,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.COORD_TOOLS -> pro.jayeshseth.devcontrols.ui.maps.CoordinateToolsScreen(onBack = onBack)
         Route.CUSTOM_LAYOUT -> pro.jayeshseth.devcontrols.ui.CustomLayoutLabScreen(onBack = onBack)
         Route.DATA_TABLE -> pro.jayeshseth.devcontrols.ui.DataTableLabScreen(onBack = onBack)
+        Route.DECK_EDITOR -> pro.jayeshseth.devcontrols.ui.present.DeckEditorScreen(onBack = onBack)
         Route.DELAUNAY -> pro.jayeshseth.devcontrols.ui.DelaunayLabScreen(onBack = onBack)
         Route.DOODLE_PHYSICS -> pro.jayeshseth.devcontrols.ui.DoodlePhysicsLabScreen(onBack = onBack)
         Route.DOUBLE_PENDULUM -> pro.jayeshseth.devcontrols.ui.DoublePendulumLabScreen(onBack = onBack)
@@ -80,6 +81,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.PIXEL_ART -> pro.jayeshseth.devcontrols.ui.PixelArtLabScreen(onBack = onBack)
         Route.POINT_CLOUD_MORPH -> pro.jayeshseth.devcontrols.ui.PointCloudMorphLabScreen(onBack = onBack)
         Route.POMODORO -> pro.jayeshseth.devcontrols.ui.timedate.PomodoroScreen(onBack = onBack)
+        Route.PRESENT -> pro.jayeshseth.devcontrols.ui.present.PresentScreen(onBack = onBack)
         Route.PROGRESS_GALLERY -> pro.jayeshseth.devcontrols.ui.ProgressGalleryLabScreen(onBack = onBack)
         Route.PULL_DISMISS -> pro.jayeshseth.devcontrols.ui.PullToDismissLabScreen(onBack = onBack)
         Route.PULL_REFRESH -> pro.jayeshseth.devcontrols.ui.PullRefreshLabScreen(onBack = onBack)
@@ -152,6 +154,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.COORD_TOOLS,
     Route.CUSTOM_LAYOUT,
     Route.DATA_TABLE,
+    Route.DECK_EDITOR,
     Route.DELAUNAY,
     Route.DOODLE_PHYSICS,
     Route.DOUBLE_PENDULUM,
@@ -200,6 +203,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.PIXEL_ART,
     Route.POINT_CLOUD_MORPH,
     Route.POMODORO,
+    Route.PRESENT,
     Route.PROGRESS_GALLERY,
     Route.PULL_DISMISS,
     Route.PULL_REFRESH,

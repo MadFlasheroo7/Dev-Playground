@@ -1,10 +1,5 @@
 package pro.jayeshseth.devcontrols.ui.present
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -30,7 +25,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,27 +42,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import pro.jayeshseth.devcontrols.util.DeckExport
+import pro.jayeshseth.devcontrols.platform.ExportKind
+import pro.jayeshseth.devcontrols.platform.rememberDeckExporter
+import pro.jayeshseth.devcontrols.platform.rememberDeckFileIo
+import pro.jayeshseth.devcontrols.platform.rememberToaster
 import pro.jayeshseth.devcontrols.util.DeckJson
 import kotlin.math.roundToInt
 
@@ -78,45 +69,20 @@ private val BG_PRESETS = listOf(
     listOf(0xFF20121A, 0xFF3A1E2A), listOf(0xFF0B0B0B, 0xFF1F1F1F),
 )
 
-/** Track B — live deck editor: drag/resize elements, edit props, present, and export PDF/PNG. */
+/** Track B — live deck editor: drag/resize elements, edit props, present, save/open, and export. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DeckEditorScreen(onBack: () -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
     var deck by remember { mutableStateOf(sampleDeck()) }
     var current by remember { mutableIntStateOf(0) }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var idSeq by remember { mutableIntStateOf(100) }
     var presenting by remember { mutableStateOf(false) }
-    var exported by remember { mutableStateOf<Pair<String, ArrayList<Uri>>?>(null) }
     var exporting by remember { mutableStateOf(false) }
 
-    // ---- portable .deck.json via the Storage Access Framework (cross-device) ----
-    // octet-stream so the picker keeps our ".cdeck" name verbatim (a concrete mime like
-    // application/json would make it append ".json"); we write a zip bundle, not raw JSON.
-    val saveDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-        if (uri != null) scope.launch {
-            val ok = withContext(Dispatchers.IO) {
-                runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(DeckJson.toBundle(deck)) } }.isSuccess
-            }
-            Toast.makeText(ctx, if (ok) "Deck saved" else "Save failed", Toast.LENGTH_SHORT).show()
-        }
-    }
-    val openDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val parsed = withContext(Dispatchers.IO) {
-                runCatching {
-                    val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
-                    DeckJson.read(bytes)
-                }.getOrNull()
-            }
-            if (parsed != null && parsed.slides.isNotEmpty()) {
-                deck = parsed; current = 0; selectedId = null
-                Toast.makeText(ctx, "Imported \"${parsed.title}\" (${parsed.slides.size} slides)", Toast.LENGTH_SHORT).show()
-            } else Toast.makeText(ctx, "Couldn't read that deck file", Toast.LENGTH_SHORT).show()
-        }
-    }
+    val fileIo = rememberDeckFileIo()
+    val exporter = rememberDeckExporter()
+    val toast = rememberToaster()
 
     if (presenting) { PresentScreen(onBack = { presenting = false }, deck = deck); return }
 
@@ -127,6 +93,11 @@ fun DeckEditorScreen(onBack: () -> Unit) {
     fun updateSlide(t: (Slide) -> Slide) = setSlides(deck.slides.toMutableList().also { it[current] = t(it[current]) })
     fun updateElement(el: SlideElement) = updateSlide { s -> s.copy(elements = s.elements.map { if (it.id == el.id) el else it }) }
     fun addElement(e: SlideElement) { updateSlide { it.copy(elements = it.elements + e) }; selectedId = e.id }
+    fun doExport(kind: ExportKind) {
+        val ex = exporter ?: return
+        exporting = true
+        ex.export(kind, deck) { msg -> exporting = false; toast(msg) }
+    }
 
     Scaffold(
         topBar = {
@@ -134,8 +105,16 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                 title = { Text("Deck Editor") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
                 actions = {
-                    TextButton(onClick = { openDeckLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text("Open") }
-                    TextButton(onClick = { saveDeckLauncher.launch("${deck.title}.${DeckJson.EXTENSION}") }) { Text("Save") }
+                    TextButton(onClick = {
+                        fileIo.open { bytes ->
+                            val parsed = bytes?.let { runCatching { DeckJson.read(it) }.getOrNull() }
+                            if (parsed != null && parsed.slides.isNotEmpty()) {
+                                deck = parsed; current = 0; selectedId = null
+                                toast("Imported \"${parsed.title}\" (${parsed.slides.size} slides)")
+                            } else toast("Couldn't read that deck file")
+                        }
+                    }) { Text("Open") }
+                    TextButton(onClick = { fileIo.save("${deck.title}.${DeckJson.EXTENSION}", DeckJson.toBundle(deck)) }) { Text("Save") }
                     TextButton(onClick = { presenting = true }) { Text("Present") }
                 }
             )
@@ -207,53 +186,15 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                                 current = current.coerceAtMost(newList.lastIndex).coerceAtLeast(0)
                             }
                         } else null,
-                        onExportPdf = {
-                            exporting = true
-                            scope.launch {
-                                val uri = withContext(Dispatchers.IO) { DeckExport.exportPdf(ctx, deck) }
-                                exporting = false
-                                if (uri != null) exported = "application/pdf" to arrayListOf(uri)
-                                else Toast.makeText(ctx, "PDF export failed", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        onExportPng = {
-                            exporting = true
-                            scope.launch {
-                                val uris = withContext(Dispatchers.IO) { DeckExport.exportPng(ctx, deck) }
-                                exporting = false
-                                if (uris.isNotEmpty()) exported = "image/png" to ArrayList(uris)
-                                else Toast.makeText(ctx, "PNG export failed", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        onExportPptx = {
-                            exporting = true
-                            scope.launch {
-                                val uri = withContext(Dispatchers.IO) { DeckExport.exportPptx(ctx, deck) }
-                                exporting = false
-                                if (uri != null) exported = "application/vnd.openxmlformats-officedocument.presentationml.presentation" to arrayListOf(uri)
-                                else Toast.makeText(ctx, "PPTX export failed", Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onExportPdf = { doExport(ExportKind.PDF) },
+                        onExportPng = { doExport(ExportKind.PNG) },
+                        onExportPptx = { doExport(ExportKind.PPTX) },
                         exporting = exporting,
+                        canExport = exporter != null,
                     )
                 }
             }
         }
-    }
-
-    exported?.let { (mime, uris) ->
-        AlertDialog(
-            onDismissRequest = { exported = null },
-            title = { Text("Saved to Downloads") },
-            text = { Text("${uris.size} file(s) exported as $mime.") },
-            confirmButton = { TextButton(onClick = { shareUris(ctx, mime, uris); exported = null }) { Text("Share") } },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { openUri(ctx, mime, uris.first()); exported = null }) { Text("Open") }
-                    TextButton(onClick = { exported = null }) { Text("Close") }
-                }
-            }
-        )
     }
 }
 
@@ -288,7 +229,6 @@ private fun EditableElement(el: SlideElement, wPx: Float, hPx: Float, selected: 
             ElementType.SHAPE ->
                 Box(Modifier.fillMaxSize().clip(if (el.shape == ShapeKind.CIRCLE) CircleShape else RoundedCornerShape(14.dp)).background(Color(el.colorArgb)))
         }
-        // resize handle (bottom-right)
         if (selected) {
             Box(
                 Modifier.align(Alignment.BottomEnd).size(20.dp).clip(CircleShape).background(Color(0xFF4C6FFF))
@@ -367,7 +307,8 @@ private fun ElementProps(el: SlideElement, onChange: (SlideElement) -> Unit, onD
 @Composable
 private fun SlideProps(
     slide: Slide, updateSlide: ((Slide) -> Slide) -> Unit, onAdd: (ElementType) -> Unit,
-    onDeleteSlide: (() -> Unit)?, onExportPdf: () -> Unit, onExportPng: () -> Unit, onExportPptx: () -> Unit, exporting: Boolean,
+    onDeleteSlide: (() -> Unit)?, onExportPdf: () -> Unit, onExportPng: () -> Unit, onExportPptx: () -> Unit,
+    exporting: Boolean, canExport: Boolean,
 ) {
     Text("Add element", style = MaterialTheme.typography.titleMedium)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -395,14 +336,16 @@ private fun SlideProps(
         }
     }
 
-    Spacer(Modifier.height(20.dp))
-    Text("Export", style = MaterialTheme.typography.titleMedium)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = onExportPdf, enabled = !exporting) { Text("Export PDF") }
-        Button(onClick = onExportPptx, enabled = !exporting) { Text("Export PPTX") }
-        OutlinedButton(onClick = onExportPng, enabled = !exporting) { Text("Export PNGs") }
+    if (canExport) {
+        Spacer(Modifier.height(20.dp))
+        Text("Export", style = MaterialTheme.typography.titleMedium)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onExportPdf, enabled = !exporting) { Text("Export PDF") }
+            Button(onClick = onExportPptx, enabled = !exporting) { Text("Export PPTX") }
+            OutlinedButton(onClick = onExportPng, enabled = !exporting) { Text("Export PNGs") }
+        }
+        if (exporting) { Spacer(Modifier.height(8.dp)); Text("Exporting…", color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
-    if (exporting) { Spacer(Modifier.height(8.dp)); Text("Exporting…", color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
     onDeleteSlide?.let {
         Spacer(Modifier.height(20.dp))
@@ -426,19 +369,4 @@ private fun Swatches(selected: Long, onPick: (Long) -> Unit) {
             )
         }
     }
-}
-
-private fun openUri(ctx: android.content.Context, mime: String, uri: Uri) {
-    runCatching {
-        ctx.startActivity(Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, mime); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-        })
-    }.onFailure { Toast.makeText(ctx, "No app to open $mime", Toast.LENGTH_SHORT).show() }
-}
-
-private fun shareUris(ctx: android.content.Context, mime: String, uris: ArrayList<Uri>) {
-    val intent = if (uris.size == 1) Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, uris.first()) }
-    else Intent(Intent.ACTION_SEND_MULTIPLE).apply { putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris) }
-    intent.type = mime; intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    ctx.startActivity(Intent.createChooser(intent, "Share deck").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
