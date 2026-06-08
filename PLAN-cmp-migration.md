@@ -18,12 +18,18 @@ unchanged (`pro.jayeshseth.devcontrols`) so moving a file between source sets ch
 `androidMain/{AndroidManifest.xml,res,assets}` wired via `android.sourceSets["main"]`.
 
 ## Steps & checkpoints
-1. **DONE** — scaffold: `:app`→`:composeApp`, MP build (androidTarget only), ALL code in
-   androidMain. ✅ `:composeApp:assembleDebug` builds the unchanged app.
-2. Desktop(JVM) target + hello window → `:composeApp:run`.
-3. Nav shell + theme → commonMain (Route enum, ScreenRegistry expect/actual, AppRoot,
-   BackHandlerCommon, dynamicColorScheme). Android holds all routes initially.
-4. Portable mega-batch → commonMain, dir-by-dir, assembleDebug+desktop green each sub-batch.
+1. **DONE** (e090f35) — scaffold: `:app`→`:composeApp`, MP build (androidTarget only), all
+   code in androidMain. ✅ `:composeApp:assembleDebug` builds the unchanged app.
+2. **DONE** (364b9ad) — Desktop(JVM) target + hello window. ✅ `:composeApp:compileKotlinDesktop`.
+3. **DONE** (ebb61cf) — nav shell + theme → commonMain (Route enum, AppRoot, expect
+   BackHandlerCommon/PlatformHome/PlatformScreenHost, expect dynamicColorScheme,
+   DefaultHome/MissingScreen). Android keeps the 261-branch when + home as actuals.
+4. **IN PROGRESS** (dc5b937, batch 1) — 113 portable screens → commonMain; generated
+   nav/ScreenRegistry.kt `CommonScreen(route,onBack):Boolean` + `commonRoutes`. 32 candidates
+   reverted (transitive Android deps). ✅ desktop + android green. REMAINING: ~57 screens
+   flagged android-only by the conservative heuristic (mostly `java.*`/`String.format`,
+   shader-scaffold users, and partial screens) — revisit with the capability layer / for
+   desktop-only where `java.*` is fine but wasm is not.
 5. Capability layer (expect/actual): kotlinx-serialization (DeckJson), DeckArchive zip, FileIo
    save/open, clipboard, share, showToast — android+desktop actuals.
 6. Web (Wasm) target; gate off SharedTransitionLayout/`java.*` screens.
