@@ -25,8 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import org.json.JSONArray
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+
+private val prettyJson = Json { prettyPrint = true }
 
 /** JSON formatter — pretty-print + validate any JSON. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,7 +40,7 @@ fun JsonFormatterScreen(onBack: () -> Unit) {
 
     fun format() {
         val t = input.trim()
-        val r = runCatching { if (t.startsWith("[")) JSONArray(t).toString(2) else JSONObject(t).toString(2) }
+        val r = runCatching { prettyJson.encodeToString(JsonElement.serializer(), Json.parseToJsonElement(t)) }
         output = r.getOrElse { it.message ?: "Invalid JSON" }
         error = r.isFailure
     }

@@ -51,6 +51,8 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.HASHING -> pro.jayeshseth.devcontrols.ui.privacy.HashingScreen(onBack = onBack)
         Route.HEIGHTMAP3D -> pro.jayeshseth.devcontrols.ui.Heightmap3DLabScreen(onBack = onBack)
         Route.IME_INSETS -> pro.jayeshseth.devcontrols.ui.ImeInsetsLabScreen(onBack = onBack)
+        Route.JSON_FMT -> pro.jayeshseth.devcontrols.ui.devtools.JsonFormatterScreen(onBack = onBack)
+        Route.JWT_DECODE -> pro.jayeshseth.devcontrols.ui.devtools.JwtDecoderScreen(onBack = onBack)
         Route.KALEIDOSCOPE -> pro.jayeshseth.devcontrols.ui.KaleidoscopeLabScreen(onBack = onBack)
         Route.KANBAN -> pro.jayeshseth.devcontrols.ui.KanbanLabScreen(onBack = onBack)
         Route.LIGHTNING -> pro.jayeshseth.devcontrols.ui.LightningLabScreen(onBack = onBack)
@@ -174,6 +176,8 @@ val commonRoutes: Set<Route> = setOf(
     Route.HASHING,
     Route.HEIGHTMAP3D,
     Route.IME_INSETS,
+    Route.JSON_FMT,
+    Route.JWT_DECODE,
     Route.KALEIDOSCOPE,
     Route.KANBAN,
     Route.LIGHTNING,

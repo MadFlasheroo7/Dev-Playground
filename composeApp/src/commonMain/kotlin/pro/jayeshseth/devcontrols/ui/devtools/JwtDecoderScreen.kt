@@ -1,6 +1,7 @@
 package pro.jayeshseth.devcontrols.ui.devtools
 
-import android.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,15 +26,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+
+private val prettyJson = Json { prettyPrint = true }
+private val jwtB64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
 
 /** JWT decoder — splits a token and base64url-decodes the header + payload. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalEncodingApi::class)
 @Composable
 fun JwtDecoderScreen(onBack: () -> Unit) {
     var token by remember { mutableStateOf("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJuYW1lIjoiQWRhIiwiaWF0IjoxNTE2MjM5MDIyfQ.sig") }
 
-    fun decode(part: String) = runCatching { JSONObject(String(Base64.decode(part, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP))).toString(2) }.getOrDefault("(undecodable)")
+    fun decode(part: String) = runCatching {
+        prettyJson.encodeToString(JsonElement.serializer(), Json.parseToJsonElement(jwtB64.decode(part).decodeToString()))
+    }.getOrDefault("(undecodable)")
     val parts = token.trim().split(".")
     val header = if (parts.size >= 1 && parts[0].isNotEmpty()) decode(parts[0]) else ""
     val payload = if (parts.size >= 2) decode(parts[1]) else ""
