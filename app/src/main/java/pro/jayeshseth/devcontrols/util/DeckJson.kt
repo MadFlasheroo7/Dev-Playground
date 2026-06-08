@@ -2,6 +2,11 @@ package pro.jayeshseth.devcontrols.util
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import pro.jayeshseth.devcontrols.ui.present.Deck
 import pro.jayeshseth.devcontrols.ui.present.ElementType
 import pro.jayeshseth.devcontrols.ui.present.Entrance
@@ -22,16 +27,46 @@ object DeckJson {
     const val FORMAT = "cdeck"
 
     /**
-     * Reads a `.cdeck` by sniffing its container so a future zip bundle can drop in without
-     * breaking files written today: `{` => JSON (now + legacy `.deck.json`), `PK` => zip.
+     * Writes a `.cdeck` as a zip bundle (`PK…` magic, per-entry CRC) holding a manifest and the
+     * deck model. A zip — not raw JSON — so the file is a distinct, integrity-checked container:
+     * a truncated/corrupt file fails loudly on read instead of silently parsing partial text.
+     * `media/` for embedded assets slots in here later without changing the reader.
+     */
+    fun toBundle(deck: Deck): ByteArray {
+        val baos = ByteArrayOutputStream()
+        ZipOutputStream(baos).use { zip ->
+            fun entry(name: String, content: String) {
+                zip.putNextEntry(ZipEntry(name)); zip.write(content.toByteArray(Charsets.UTF_8)); zip.closeEntry()
+            }
+            entry("manifest.json", JSONObject().put("format", FORMAT).put("version", VERSION).toString())
+            entry("deck.json", toJson(deck))
+        }
+        return baos.toByteArray()
+    }
+
+    /**
+     * Reads a `.cdeck` by sniffing its container so old files keep opening: `PK` => zip bundle
+     * (the current format), `{` => raw JSON (legacy `.deck.json` / early `.cdeck`).
      */
     fun read(bytes: ByteArray): Deck {
         val firstNonWs = bytes.firstOrNull { !Character.isWhitespace(it.toInt()) }?.toInt()?.toChar()
         return when (firstNonWs) {
+            'P' -> readBundle(bytes)
             '{' -> fromJson(bytes.toString(Charsets.UTF_8))
-            'P' -> throw UnsupportedOperationException("Zip-bundle .cdeck not supported yet")
             else -> throw IllegalArgumentException("Unrecognized .cdeck file")
         }
+    }
+
+    private fun readBundle(bytes: ByteArray): Deck {
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            var e = zip.nextEntry
+            while (e != null) {
+                if (e.name == "deck.json") return fromJson(zip.readBytes().toString(Charsets.UTF_8))
+                zip.closeEntry()
+                e = zip.nextEntry
+            }
+        }
+        throw IllegalArgumentException("No deck.json inside .cdeck bundle")
     }
 
     fun toJson(deck: Deck): String {

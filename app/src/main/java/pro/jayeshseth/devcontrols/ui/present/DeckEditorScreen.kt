@@ -93,10 +93,12 @@ fun DeckEditorScreen(onBack: () -> Unit) {
     var exporting by remember { mutableStateOf(false) }
 
     // ---- portable .deck.json via the Storage Access Framework (cross-device) ----
-    val saveDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    // octet-stream so the picker keeps our ".cdeck" name verbatim (a concrete mime like
+    // application/json would make it append ".json"); we write a zip bundle, not raw JSON.
+    val saveDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) scope.launch {
             val ok = withContext(Dispatchers.IO) {
-                runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(DeckJson.toJson(deck).toByteArray()) } }.isSuccess
+                runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(DeckJson.toBundle(deck)) } }.isSuccess
             }
             Toast.makeText(ctx, if (ok) "Deck saved" else "Save failed", Toast.LENGTH_SHORT).show()
         }
