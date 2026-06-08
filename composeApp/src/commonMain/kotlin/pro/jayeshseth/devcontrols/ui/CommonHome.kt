@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import pro.jayeshseth.devcontrols.nav.Route
-import pro.jayeshseth.devcontrols.nav.commonScreens
+import pro.jayeshseth.devcontrols.nav.commonRoutes
 
 /** Default home for non-Android platforms: title + the portable screens available so far. */
 @Composable
@@ -28,12 +28,12 @@ fun DefaultHome(onNavigate: (Route) -> Unit) {
     ) {
         Text("DevControls", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Compose Multiplatform build. ${commonScreens.size} portable screens available; " +
+            "Compose Multiplatform build. ${commonRoutes.size} portable screens available; " +
                 "Android-only features run on the Android app.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        commonScreens.keys.sortedBy { it.name }.forEach { route ->
+        commonRoutes.sortedBy { it.name }.forEach { route ->
             Button(onClick = { onNavigate(route) }, modifier = Modifier) {
                 Text(route.name)
             }

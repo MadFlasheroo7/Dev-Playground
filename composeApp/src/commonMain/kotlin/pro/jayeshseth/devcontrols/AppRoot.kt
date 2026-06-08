@@ -9,8 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
+import pro.jayeshseth.devcontrols.nav.CommonScreen
 import pro.jayeshseth.devcontrols.nav.Route
-import pro.jayeshseth.devcontrols.nav.commonScreens
 import pro.jayeshseth.devcontrols.ui.theme.DevControlsTheme
 
 /**
@@ -27,11 +27,10 @@ fun AppRoot(initialRoute: Route = Route.MAIN) {
 
         BackHandlerCommon(enabled = route != Route.MAIN) { route = Route.MAIN }
 
-        val common = commonScreens[route]
-        when {
-            route == Route.MAIN -> PlatformHome(homeScroll, expandedCats) { route = it }
-            common != null -> common { route = Route.MAIN }
-            else -> PlatformScreenHost(route) { route = Route.MAIN }
+        if (route == Route.MAIN) {
+            PlatformHome(homeScroll, expandedCats) { route = it }
+        } else if (!CommonScreen(route, onBack = { route = Route.MAIN })) {
+            PlatformScreenHost(route) { route = Route.MAIN }
         }
     }
 }
