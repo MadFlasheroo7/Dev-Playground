@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -15,6 +16,14 @@ kotlin {
     jvm("desktop") {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
+    // Web (Wasm) target is DEFERRED: Compose Multiplatform 1.11.1's wasm klibs don't resolve
+    // cleanly against Kotlin 2.2.10 (wasm stdlib skew → unresolved compose symbols). The
+    // wasmJsMain sources + actuals are kept for when CMP/Kotlin align. Re-enable this block then.
+    // @OptIn(ExperimentalWasmDsl::class)
+    // wasmJs {
+    //     browser { commonWebpackConfig { outputFileName = "devcontrols.js" } }
+    //     binaries.executable()
+    // }
 
     sourceSets {
         val desktopMain by getting
@@ -28,7 +37,6 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.animation)
-            implementation(compose.components.resources)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
         }

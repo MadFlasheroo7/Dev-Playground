@@ -37,8 +37,19 @@ unchanged (`pro.jayeshseth.devcontrols`) so moving a file between source sets ch
    NEXT per user: (a) migrate "everything else" still in androidMain that is actually portable;
    (b) make the home **categories** common so desktop/web show the same categorized menu (today
    they show a flat DefaultHome list; Android shows the rich DevControlsScreen).
-6. Web (Wasm) target; gate off SharedTransitionLayout/`java.*` screens.
-7. iOS source sets (declared only; unbuildable on Linux — CI/Mac verifies).
+6. **DEFERRED/BLOCKED** — Web (Wasm). wasmJsMain sources + actuals written; target block commented
+   out in build.gradle.kts. Blocker: CMP 1.11.1 wasm klibs don't resolve against Kotlin 2.2.10
+   (wasm-stdlib skew → unresolved compose symbols); Kotlin 2.2.20 cleared the stdlib warning but
+   compose symbols still unresolved (klib↔compiler mismatch). Also note: `@Serializable` crashes the
+   wasm FIR frontend here — DeckJson was switched to the kotlinx-serialization **runtime JsonElement
+   DSL** (no @Serializable, no plugin codegen) which is the right multiplatform approach regardless.
+   Revisit with a newer CMP (1.12.x) or a Kotlin that matches CMP's wasm klibs.
+7. iOS source sets (declared only; unbuildable on Linux — needs a Mac/CI). NOT yet started.
+
+## Caveat on java.* screens
+~57 screens stayed in androidMain because they use `java.*`/`String.format` — those break BOTH wasm
+AND iOS (Kotlin/Native), so to share them on desktop only they'd need a `jvmShared` intermediate
+source set (android+desktop). Deferred until iOS/wasm are live.
 
 ## Standing risks
 iOS unverifiable here; SharedTransitionLayout (ui/present) off-Android gated; `java.*` crypto

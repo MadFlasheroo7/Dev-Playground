@@ -1,15 +1,12 @@
 package pro.jayeshseth.devcontrols.ui.present
 
-import kotlinx.serialization.Serializable
-
 /** Data model for Compose-native decks. Positions are normalized (0..1) on a 16:9 canvas. */
 
-@Serializable enum class TransitionIn { NONE, FADE, PUSH, ZOOM }
-@Serializable enum class Entrance { NONE, FADE_UP, SCALE_IN, STAGGER }
-@Serializable enum class ElementType { TITLE, SUBTITLE, BODY, BULLETS, SHAPE }
-@Serializable enum class ShapeKind { CIRCLE, RECT }
+enum class TransitionIn { NONE, FADE, PUSH, ZOOM }
+enum class Entrance { NONE, FADE_UP, SCALE_IN, STAGGER }
+enum class ElementType { TITLE, SUBTITLE, BODY, BULLETS, SHAPE }
+enum class ShapeKind { CIRCLE, RECT }
 
-@Serializable
 data class SlideElement(
     val id: String,
     val type: ElementType,
@@ -25,7 +22,6 @@ data class SlideElement(
     val shape: ShapeKind = ShapeKind.RECT,
 )
 
-@Serializable
 data class Slide(
     val id: String,
     val bgColors: List<Long>,
@@ -34,7 +30,6 @@ data class Slide(
     val notes: String = "",
 )
 
-@Serializable
 data class Deck(val title: String, val slides: List<Slide>)
 
 /** A sample deck that shows off transitions + a shared-element morph (the "logo" circle). */
