@@ -18,7 +18,7 @@ actual fun PlatformHome(
     expandedCats: SnapshotStateMap<String, Boolean>,
     onNavigate: (Route) -> Unit,
 ) {
-    DefaultHome(onNavigate)
+    DefaultHome(scroll, expandedCats, onNavigate)
 }
 
 @Composable
