@@ -24,5 +24,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DevControls"
-include(":app")
+include(":composeApp")
  
