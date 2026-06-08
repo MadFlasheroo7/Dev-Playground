@@ -16,9 +16,12 @@ kotlin {
     jvm("desktop") {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
-    // Web (Wasm) target is DEFERRED: Compose Multiplatform 1.11.1's wasm klibs don't resolve
-    // cleanly against Kotlin 2.2.10 (wasm stdlib skew → unresolved compose symbols). The
-    // wasmJsMain sources + actuals are kept for when CMP/Kotlin align. Re-enable this block then.
+    // Web (Wasm) DEFERRED — blocked structurally, not by version: with the AGP 9 bypass
+    // (android.builtInKotlin=false/newDsl=false, required for com.android.application + KMP),
+    // KMP does not wire Compose deps onto the wasm classpath (androidx.compose.* unresolved).
+    // Confirmed across CMP 1.11.1 / 1.12.0-alpha01 and Kotlin 2.2.10 / 2.2.20. Desktop+Android
+    // (JVM) resolve fine. Real fix = drop the bypass via a 2-module split (com.android.application
+    // app module + com.android.kotlin.multiplatform.library shared module). Sources kept.
     // @OptIn(ExperimentalWasmDsl::class)
     // wasmJs {
     //     browser { commonWebpackConfig { outputFileName = "devcontrols.js" } }

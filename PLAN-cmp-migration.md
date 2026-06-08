@@ -37,13 +37,17 @@ unchanged (`pro.jayeshseth.devcontrols`) so moving a file between source sets ch
    NEXT per user: (a) migrate "everything else" still in androidMain that is actually portable;
    (b) make the home **categories** common so desktop/web show the same categorized menu (today
    they show a flat DefaultHome list; Android shows the rich DevControlsScreen).
-6. **DEFERRED/BLOCKED** — Web (Wasm). wasmJsMain sources + actuals written; target block commented
-   out in build.gradle.kts. Blocker: CMP 1.11.1 wasm klibs don't resolve against Kotlin 2.2.10
-   (wasm-stdlib skew → unresolved compose symbols); Kotlin 2.2.20 cleared the stdlib warning but
-   compose symbols still unresolved (klib↔compiler mismatch). Also note: `@Serializable` crashes the
-   wasm FIR frontend here — DeckJson was switched to the kotlinx-serialization **runtime JsonElement
-   DSL** (no @Serializable, no plugin codegen) which is the right multiplatform approach regardless.
-   Revisit with a newer CMP (1.12.x) or a Kotlin that matches CMP's wasm klibs.
+6. **DEFERRED/BLOCKED (structural)** — Web (Wasm). wasmJsMain sources + actuals written; target
+   block commented out. **Root cause is NOT version skew** — it's the AGP 9 bypass
+   (`android.builtInKotlin=false`/`newDsl=false`, required so `com.android.application` can coexist
+   with the KMP plugin): under it, KMP doesn't wire Compose deps onto the **wasm** classpath
+   (`androidx.compose.*` unresolved), while JVM targets (Android/desktop) resolve fine. Confirmed
+   identical failure across CMP 1.11.1 + 1.12.0-alpha01 and Kotlin 2.2.10 + 2.2.20 (the matching
+   wasm stdlib). Secondary: `@Serializable` crashes the wasm FIR frontend → DeckJson already moved
+   to the kotlinx-serialization **runtime JsonElement DSL** (no codegen; good everywhere).
+   **Real fix:** drop the bypass via the Google-recommended 2-module split — a `com.android.application`
+   app module consuming a `com.android.kotlin.multiplatform.library` shared module (no
+   application+KMP conflict, so no bypass, so wasm/iOS resolve normally). Larger refactor; needs sign-off.
 7. iOS source sets (declared only; unbuildable on Linux — needs a Mac/CI). NOT yet started.
 
 ## Caveat on java.* screens
