@@ -51,9 +51,38 @@ actual fun rememberDeckFileIo(): DeckFileIo = remember {
     }
 }
 
-// Desktop has no built-in PDF/PPTX/MediaStore export yet.
 @Composable
-actual fun rememberDeckExporter(): DeckExporter? = null
+actual fun rememberDeckExporter(): DeckExporter? = remember {
+    object : DeckExporter {
+        override fun export(kind: ExportKind, deck: Deck, onStatus: (String) -> Unit) {
+            val safe = deck.title.replace(Regex("[^A-Za-z0-9_-]"), "_").ifBlank { "deck" }
+            when (kind) {
+                ExportKind.PDF -> saveOne("$safe.pdf", DeckExportAwt.exportPdf(deck), onStatus)
+                ExportKind.PPTX -> saveOne("$safe.pptx", DeckExportAwt.exportPptx(deck), onStatus)
+                ExportKind.PNG -> {
+                    val fd = FileDialog(null as Frame?, "Export PNGs (base name)", FileDialog.SAVE).apply { file = "$safe.png"; isVisible = true }
+                    val dir = fd.directory; val name = fd.file
+                    if (dir == null || name == null) { onStatus("Cancelled"); return }
+                    val base = name.removeSuffix(".png")
+                    runCatching {
+                        deck.slides.forEachIndexed { i, s -> File(dir, "${base}_${i + 1}.png").writeBytes(DeckExportAwt.png(s)) }
+                    }.onSuccess { onStatus("Saved ${deck.slides.size} PNGs to $dir") }
+                        .onFailure { onStatus("Export failed") }
+                }
+            }
+        }
+
+        private fun saveOne(suggested: String, bytes: ByteArray, onStatus: (String) -> Unit) {
+            val fd = FileDialog(null as Frame?, "Export", FileDialog.SAVE).apply { file = suggested; isVisible = true }
+            val dir = fd.directory; val name = fd.file
+            if (dir != null && name != null) {
+                runCatching { File(dir, name).writeBytes(bytes) }
+                    .onSuccess { onStatus("Saved ${File(dir, name).absolutePath}") }
+                    .onFailure { onStatus("Export failed") }
+            } else onStatus("Cancelled")
+        }
+    }
+}
 
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
