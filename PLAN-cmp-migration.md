@@ -45,9 +45,18 @@ unchanged (`pro.jayeshseth.devcontrols`) so moving a file between source sets ch
    identical failure across CMP 1.11.1 + 1.12.0-alpha01 and Kotlin 2.2.10 + 2.2.20 (the matching
    wasm stdlib). Secondary: `@Serializable` crashes the wasm FIR frontend → DeckJson already moved
    to the kotlinx-serialization **runtime JsonElement DSL** (no codegen; good everywhere).
-   **Real fix:** drop the bypass via the Google-recommended 2-module split — a `com.android.application`
-   app module consuming a `com.android.kotlin.multiplatform.library` shared module (no
-   application+KMP conflict, so no bypass, so wasm/iOS resolve normally). Larger refactor; needs sign-off.
+   **Tried the 2-module split** (`com.android.application` app + `com.android.kotlin.multiplatform.library`
+   shared) to drop the bypass — wasm STILL failed identically. Root cause finally pinned via
+   `dependencyInsight` on `wasmJsCompileClasspath`: **CMP's wasm artifacts are mutually mis-versioned**
+   — `material3-wasm-js:1.9.0` (Material3 is on a separate, lagging version track) is pulled alongside
+   `foundation/runtime/ui/animation-wasm-js:1.11.1`; those klibs are incompatible on wasm so every
+   `androidx.compose.*` symbol is unresolved. JVM (Android/desktop) tolerates the mix; wasm klibs don't.
+   This is a **Compose Multiplatform bug**, independent of our architecture/versions/bypass — no code or
+   module change fixes it. The split also surfaced two more blockers: `com.android.kotlin.multiplatform.library`
+   does NOT expose android res to the consuming app (launcher icon/theme/xml configs "not found"), and lib
+   code (A11yCloakService) references MainActivity (can't move the Activity out cleanly).
+   **Verdict:** web is unbuildable here until CMP ships aligned material3/core wasm artifacts. Reverted to
+   the stable single-module state; the 2-module split was abandoned (not committed).
 7. iOS source sets (declared only; unbuildable on Linux — needs a Mac/CI). NOT yet started.
 
 ## Caveat on java.* screens
