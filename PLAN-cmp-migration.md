@@ -30,8 +30,13 @@ unchanged (`pro.jayeshseth.devcontrols`) so moving a file between source sets ch
    flagged android-only by the conservative heuristic (mostly `java.*`/`String.format`,
    shader-scaffold users, and partial screens) — revisit with the capability layer / for
    desktop-only where `java.*` is fine but wasm is not.
-5. Capability layer (expect/actual): kotlinx-serialization (DeckJson), DeckArchive zip, FileIo
-   save/open, clipboard, share, showToast — android+desktop actuals.
+5. **IN PROGRESS** (e24b6e4) — capability layer + **deck builder cross-platform**: PresentScreen,
+   DeckEditorScreen, DeckJson → commonMain; DeckJson on kotlinx-serialization; platform/Capabilities
+   (DeckArchive zip, rememberDeckFileIo SAF/AWT, rememberDeckExporter android-real/desktop-null,
+   rememberToaster, LockLandscape). 115 common screens. REMAINING: migrate the rest + categorized home.
+   NEXT per user: (a) migrate "everything else" still in androidMain that is actually portable;
+   (b) make the home **categories** common so desktop/web show the same categorized menu (today
+   they show a flat DefaultHome list; Android shows the rich DevControlsScreen).
 6. Web (Wasm) target; gate off SharedTransitionLayout/`java.*` screens.
 7. iOS source sets (declared only; unbuildable on Linux — CI/Mac verifies).
 
