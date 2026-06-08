@@ -18,10 +18,25 @@ import pro.jayeshseth.devcontrols.ui.present.TransitionIn
  */
 object DeckJson {
     const val VERSION = 1
-    const val EXTENSION = "deck.json"
+    const val EXTENSION = "cdeck"
+    const val FORMAT = "cdeck"
+
+    /**
+     * Reads a `.cdeck` by sniffing its container so a future zip bundle can drop in without
+     * breaking files written today: `{` => JSON (now + legacy `.deck.json`), `PK` => zip.
+     */
+    fun read(bytes: ByteArray): Deck {
+        val firstNonWs = bytes.firstOrNull { !Character.isWhitespace(it.toInt()) }?.toInt()?.toChar()
+        return when (firstNonWs) {
+            '{' -> fromJson(bytes.toString(Charsets.UTF_8))
+            'P' -> throw UnsupportedOperationException("Zip-bundle .cdeck not supported yet")
+            else -> throw IllegalArgumentException("Unrecognized .cdeck file")
+        }
+    }
 
     fun toJson(deck: Deck): String {
         val root = JSONObject()
+        root.put("format", FORMAT)
         root.put("version", VERSION)
         root.put("title", deck.title)
         val slides = JSONArray()

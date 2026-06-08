@@ -105,8 +105,8 @@ fun DeckEditorScreen(onBack: () -> Unit) {
         if (uri != null) scope.launch {
             val parsed = withContext(Dispatchers.IO) {
                 runCatching {
-                    val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
-                    DeckJson.fromJson(text)
+                    val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+                    DeckJson.read(bytes)
                 }.getOrNull()
             }
             if (parsed != null && parsed.slides.isNotEmpty()) {
