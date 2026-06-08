@@ -48,6 +48,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.GAME_OF_LIFE -> pro.jayeshseth.devcontrols.ui.GameOfLifeLabScreen(onBack = onBack)
         Route.GLOBE -> pro.jayeshseth.devcontrols.ui.PointCloudGlobeLabScreen(onBack = onBack)
         Route.GOOEY_NAV -> pro.jayeshseth.devcontrols.ui.visualfx.GooeyNavBarScreen(onBack = onBack)
+        Route.HASHING -> pro.jayeshseth.devcontrols.ui.privacy.HashingScreen(onBack = onBack)
         Route.HEIGHTMAP3D -> pro.jayeshseth.devcontrols.ui.Heightmap3DLabScreen(onBack = onBack)
         Route.IME_INSETS -> pro.jayeshseth.devcontrols.ui.ImeInsetsLabScreen(onBack = onBack)
         Route.KALEIDOSCOPE -> pro.jayeshseth.devcontrols.ui.KaleidoscopeLabScreen(onBack = onBack)
@@ -170,6 +171,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.GAME_OF_LIFE,
     Route.GLOBE,
     Route.GOOEY_NAV,
+    Route.HASHING,
     Route.HEIGHTMAP3D,
     Route.IME_INSETS,
     Route.KALEIDOSCOPE,
