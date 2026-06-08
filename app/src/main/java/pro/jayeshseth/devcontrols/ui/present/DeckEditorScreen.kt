@@ -3,6 +3,8 @@ package pro.jayeshseth.devcontrols.ui.present
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -67,6 +69,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import pro.jayeshseth.devcontrols.util.DeckExport
+import pro.jayeshseth.devcontrols.util.DeckJson
 import kotlin.math.roundToInt
 
 private val COLOR_PRESETS = listOf(0xFFFFFFFF, 0xFFB9C0D8, 0xFF4C6FFF, 0xFF22FFAA, 0xFFFFC857, 0xFFFF5C8A, 0xFF101225)
@@ -89,6 +92,30 @@ fun DeckEditorScreen(onBack: () -> Unit) {
     var exported by remember { mutableStateOf<Pair<String, ArrayList<Uri>>?>(null) }
     var exporting by remember { mutableStateOf(false) }
 
+    // ---- portable .deck.json via the Storage Access Framework (cross-device) ----
+    val saveDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching { ctx.contentResolver.openOutputStream(uri)!!.use { it.write(DeckJson.toJson(deck).toByteArray()) } }.isSuccess
+            }
+            Toast.makeText(ctx, if (ok) "Deck saved" else "Save failed", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val openDeckLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val parsed = withContext(Dispatchers.IO) {
+                runCatching {
+                    val text = ctx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
+                    DeckJson.fromJson(text)
+                }.getOrNull()
+            }
+            if (parsed != null && parsed.slides.isNotEmpty()) {
+                deck = parsed; current = 0; selectedId = null
+                Toast.makeText(ctx, "Imported \"${parsed.title}\" (${parsed.slides.size} slides)", Toast.LENGTH_SHORT).show()
+            } else Toast.makeText(ctx, "Couldn't read that deck file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     if (presenting) { PresentScreen(onBack = { presenting = false }, deck = deck); return }
 
     val slide = deck.slides[current]
@@ -105,6 +132,8 @@ fun DeckEditorScreen(onBack: () -> Unit) {
                 title = { Text("Deck Editor") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
                 actions = {
+                    TextButton(onClick = { openDeckLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text("Open") }
+                    TextButton(onClick = { saveDeckLauncher.launch("${deck.title}.${DeckJson.EXTENSION}") }) { Text("Save") }
                     TextButton(onClick = { presenting = true }) { Text("Present") }
                 }
             )
