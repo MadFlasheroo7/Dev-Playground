@@ -1,7 +1,15 @@
 package pro.jayeshseth.devcontrols.platform
 
+import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import pro.jayeshseth.devcontrols.ui.present.Deck
 import java.awt.FileDialog
 import java.awt.Frame
@@ -86,6 +94,31 @@ actual fun rememberDeckExporter(): DeckExporter? = remember {
 
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
+
+@Composable
+actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
+    val effect = remember(source) {
+        runCatching { org.jetbrains.skia.RuntimeEffect.makeForShader(source) }.getOrNull()
+    }
+    if (effect == null) { Box(modifier) { fallback() }; return }
+    val time by produceState(0f) {
+        while (true) { withInfiniteAnimationFrameMillis { value = it / 1000f } }
+    }
+    Box(
+        modifier.drawBehind {
+            runCatching {
+                val w = size.width; val h = size.height
+                val bytes = java.nio.ByteBuffer.allocate(12).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                    .putFloat(w).putFloat(h).putFloat(time).array()
+                val shader = effect.makeShader(
+                    org.jetbrains.skia.Data.makeFromBytes(bytes), null, null
+                )
+                val paint = org.jetbrains.skia.Paint().apply { this.shader = shader }
+                drawIntoCanvas { it.nativeCanvas.drawRect(org.jetbrains.skia.Rect.makeWH(w, h), paint) }
+            }
+        }
+    )
+}
 
 /** Set by the desktop entry point so [PresentationMode] can toggle the window to fullscreen. */
 val LocalWindowState = androidx.compose.runtime.staticCompositionLocalOf<androidx.compose.ui.window.WindowState?> { null }

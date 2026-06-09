@@ -28,6 +28,10 @@ data class Slide(
     val transitionIn: TransitionIn = TransitionIn.FADE,
     val elements: List<SlideElement>,
     val notes: String = "",
+    /** Optional SkSL/AGSL shader source for an animated, hand-coded background. Declares
+     *  `uniform float2 iResolution; uniform float iTime;` and `half4 main(float2 fc)`. Falls
+     *  back to [bgColors] gradient if null, unsupported, or it fails to compile. */
+    val bgShader: String? = null,
 )
 
 data class Deck(val title: String, val slides: List<Slide>)

@@ -35,17 +35,34 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import pro.jayeshseth.devcontrols.platform.ShaderBackground
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-/** Renders one slide. Reused by present mode (and later the editor + export). */
+/** The slide background: a hand-coded animated shader if [Slide.bgShader] is set, else the gradient. */
+@Composable
+fun SlideBackground(slide: Slide, modifier: Modifier = Modifier) {
+    val src = slide.bgShader
+    if (src.isNullOrBlank()) {
+        Box(modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
+    } else {
+        ShaderBackground(src, modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
+        }
+    }
+}
+
+/** Renders one slide. Reused by present mode and the editor. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SlideRenderer(slide: Slide, shared: SharedTransitionScope, av: AnimatedVisibilityScope, modifier: Modifier = Modifier) {
-    BoxWithConstraints(modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) }))) {
-        val wPx = constraints.maxWidth.toFloat(); val hPx = constraints.maxHeight.toFloat()
-        val density = LocalDensity.current
-        slide.elements.forEach { el -> key(el.id) { ElementView(el, wPx, hPx, density, shared, av) } }
+    Box(modifier.fillMaxSize()) {
+        SlideBackground(slide)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val wPx = constraints.maxWidth.toFloat(); val hPx = constraints.maxHeight.toFloat()
+            val density = LocalDensity.current
+            slide.elements.forEach { el -> key(el.id) { ElementView(el, wPx, hPx, density, shared, av) } }
+        }
     }
 }
 

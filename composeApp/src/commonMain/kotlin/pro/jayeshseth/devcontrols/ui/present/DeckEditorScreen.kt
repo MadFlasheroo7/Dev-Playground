@@ -123,14 +123,15 @@ fun DeckEditorScreen(onBack: () -> Unit) {
     ) { inner ->
         Column(Modifier.padding(inner).fillMaxSize()) {
             // ---- canvas ----
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                    .background(Brush.linearGradient(slide.bgColors.map { Color(it) }))
-                    .pointerInput(current) { detectTapGestures { selectedId = null } }
-            ) {
-                val wPx = constraints.maxWidth.toFloat(); val hPx = constraints.maxHeight.toFloat()
-                slide.elements.forEach { el ->
-                    EditableElement(el, wPx, hPx, el.id == selectedId, { selectedId = el.id }, ::updateElement)
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+                SlideBackground(slide)
+                BoxWithConstraints(
+                    Modifier.fillMaxSize().pointerInput(current) { detectTapGestures { selectedId = null } }
+                ) {
+                    val wPx = constraints.maxWidth.toFloat(); val hPx = constraints.maxHeight.toFloat()
+                    slide.elements.forEach { el ->
+                        EditableElement(el, wPx, hPx, el.id == selectedId, { selectedId = el.id }, ::updateElement)
+                    }
                 }
             }
 
@@ -335,6 +336,29 @@ private fun SlideProps(
             )
         }
     }
+
+    Spacer(Modifier.height(16.dp))
+    Text("Code background (SkSL/AGSL)", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Write a shader for an animated background. Uniforms: float2 iResolution, float iTime. " +
+            "Falls back to the gradient if empty or it doesn't compile.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        pro.jayeshseth.devcontrols.platform.ShaderPresets.list.forEach { (name, src) ->
+            AssistChip(onClick = { updateSlide { it.copy(bgShader = src) } }, label = { Text(name) })
+        }
+        if (!slide.bgShader.isNullOrBlank()) {
+            AssistChip(onClick = { updateSlide { it.copy(bgShader = null) } }, label = { Text("Clear") })
+        }
+    }
+    OutlinedTextField(
+        value = slide.bgShader ?: "",
+        onValueChange = { updateSlide { s -> s.copy(bgShader = it.ifBlank { null }) } },
+        label = { Text("Shader source") },
+        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp),
+        modifier = Modifier.fillMaxWidth().height(160.dp)
+    )
 
     if (canExport) {
         Spacer(Modifier.height(20.dp))

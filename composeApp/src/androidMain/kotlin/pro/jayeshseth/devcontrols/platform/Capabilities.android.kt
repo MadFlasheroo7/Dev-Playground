@@ -10,6 +10,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -97,6 +103,24 @@ actual fun rememberDeckExporter(): DeckExporter? {
 actual fun rememberToaster(): (String) -> Unit {
     val ctx = LocalContext.current
     return remember { { msg: String -> Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show() } }
+}
+
+@Composable
+actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
+        Box(modifier) { fallback() }; return
+    }
+    val shader = remember(source) { runCatching { android.graphics.RuntimeShader(source) }.getOrNull() }
+    if (shader == null) { Box(modifier) { fallback() }; return }
+    val brush = remember(shader) { ShaderBrush(shader) }
+    val time by produceState(0f) { while (true) { withInfiniteAnimationFrameMillis { value = it / 1000f } } }
+    Box(modifier.drawBehind {
+        runCatching {
+            shader.setFloatUniform("iResolution", size.width, size.height)
+            shader.setFloatUniform("iTime", time)
+            drawRect(brush)
+        }
+    })
 }
 
 @Composable

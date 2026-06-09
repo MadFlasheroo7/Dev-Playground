@@ -1,7 +1,9 @@
 package pro.jayeshseth.devcontrols.platform
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import pro.jayeshseth.devcontrols.ui.present.Deck
 
 // No java.util.zip on wasm — store the deck JSON uncompressed. DeckJson.read() handles the
@@ -29,3 +31,9 @@ actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> pri
 // screen.orientation.lock("landscape") via kotlinx-browser. No-op for now.
 @Composable
 actual fun PresentationMode() { /* no-op on web until wasm target returns */ }
+
+// TODO when wasm is re-enabled: WebGL/Skiko RuntimeEffect. Falls back to the gradient for now.
+@Composable
+actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
+    Box(modifier) { fallback() }
+}
