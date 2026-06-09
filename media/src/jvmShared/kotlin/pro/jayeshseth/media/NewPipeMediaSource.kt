@@ -31,6 +31,9 @@ private object NewPipeMediaSource : MediaSource {
     init {
         // One-time global init: give NewPipe our OkHttp-backed downloader. Localization defaults to en/US.
         NewPipe.init(OkHttpDownloader(OkHttpClient()))
+        // Register the platform PoToken provider (Android WebView/BotGuard) so YouTube hands back real
+        // stream URLs. No-op on Desktop, where extraction degrades to an inline error. See PoTokenSetup.kt.
+        runCatching { installYoutubePoTokenProvider() }
     }
 
     override suspend fun search(query: String): List<MediaItem> = withContext(Dispatchers.IO) {
