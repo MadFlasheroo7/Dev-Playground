@@ -1,5 +1,6 @@
 package pro.jayeshseth.devcontrols.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -39,9 +40,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.text.font.FontFamily
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,6 +92,25 @@ fun GradientMorphLabScreen(onBack: () -> Unit) {
         ) {
             Text("Solid at rest — hover or press/drag to morph to a gradient.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            // ---- one-shot action buttons (debounced): tap -> animate once -> fire after ----
+            val fires = remember { mutableStateListOf<String>() }
+            var fireCount by remember { mutableIntStateOf(0) }
+            Section("Action buttons — one-shot, fires after the animation")
+            Text("Tap fast / mash several at once: each fires exactly once, only when its sweep finishes; " +
+                "taps during the animation are ignored.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val actions = listOf("Pay" to GA, "Confirm" to GB, "Submit" to GD, "Save" to GA, "Send" to GB, "Delete" to GC, "Sync" to GD, "Export" to GC)
+            actions.forEach { (label, grad) ->
+                MorphActionButton(label, SolidA, grad) { fireCount++; fires.add(0, "#$fireCount  $label") }
+            }
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF11152A)).padding(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("onClick fires: $fireCount", color = Color(0xFF22FFAA), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    if (fires.isEmpty()) Text("(no taps yet)", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    fires.take(6).forEach { Text(it, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
+                }
+            }
 
             Section("Buttons & chips")
             MorphButton("Get started", SolidA, GA)
@@ -144,6 +170,40 @@ fun Modifier.morphFill(shape: Shape, solid: Color, gradient: List<Color>, amount
     }
 
 // ---- components ----
+
+/**
+ * Tap/click plays the gradient sweep once; the button is non-clickable while it animates, and
+ * [onClick] fires only when the sweep completes. Each instance owns its animation, so a screen
+ * full of these never produces duplicate/cross fires — and re-taps mid-animation are dropped.
+ */
+@Composable
+private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onClick: () -> Unit) {
+    val progress = remember { Animatable(0f) }
+    var playing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    Box(
+        Modifier.fillMaxWidth().height(52.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .drawBehind {
+                drawRect(solid)
+                val rw = size.width * progress.value
+                if (rw > 0f) clipRect(0f, 0f, rw, size.height) { drawRect(Brush.horizontalGradient(gradient)) }
+            }
+            .clickable(enabled = !playing) {
+                playing = true
+                scope.launch {
+                    progress.snapTo(0f)
+                    progress.animateTo(1f, tween(480))
+                    onClick()                       // fire only after the animation
+                    progress.animateTo(0f, tween(220))
+                    playing = false
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = Color.White, fontWeight = FontWeight.SemiBold)
+    }
+}
 
 @Composable
 private fun MorphButton(text: String, solid: Color, gradient: List<Color>) {
