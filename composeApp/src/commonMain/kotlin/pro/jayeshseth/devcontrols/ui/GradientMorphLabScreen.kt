@@ -1,11 +1,14 @@
 package pro.jayeshseth.devcontrols.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,8 +60,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -146,37 +149,63 @@ private fun Section(title: String) =
 
 // ---- reusable morph primitives ----
 
-/** Interaction → animated 0..1 morph amount, plus a continuous drift phase used while active. */
+/** Interaction → spring-eased 0..1 morph amount, plus a continuously flowing drift phase. */
 @Composable
 fun morphState(interaction: MutableInteractionSource, extra: Float = 0f): Pair<Float, Float> {
     val hovered by interaction.collectIsHoveredAsState()
     val pressed by interaction.collectIsPressedAsState()
-    val target = maxOf(if (pressed) 1f else if (hovered) 0.7f else 0f, extra)
-    val amount by animateFloatAsState(target, tween(340), label = "morph")
+    val target = maxOf(if (pressed) 1f else if (hovered) 0.85f else 0f, extra)
+    // A gentle, non-bouncy spring settles more naturally than a fixed tween.
+    val amount by animateFloatAsState(
+        target,
+        spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "morph"
+    )
+    // Continuous (not ping-pong) flow so the gradient drifts smoothly with no direction snap.
     val phase by rememberInfiniteTransition(label = "drift").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "phase"
+        0f, 1f, infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Restart), label = "phase"
     )
     return amount to phase
 }
 
-/** Solid fill, then a gradient on top whose alpha + angle track [amount]. */
+/**
+ * Morphs a solid fill toward a gradient: each stop is colour-lerped from [solid] by [amount] (so it
+ * grows out of the solid instead of an alpha haze over it), the gradient angle flows with [phase],
+ * and a soft diagonal sheen sweeps across while active. Subtle, but reads as polished.
+ */
 fun Modifier.morphFill(shape: Shape, solid: Color, gradient: List<Color>, amount: Float, phase: Float): Modifier =
     this.clip(shape).drawBehind {
-        drawRect(solid)
-        if (amount > 0.001f) {
-            val shift = (phase - 0.5f) * size.minDimension * 0.6f * amount
-            drawRect(Brush.linearGradient(gradient, start = Offset(-shift, 0f), end = Offset(size.width + shift, size.height)), alpha = amount)
-        }
+        if (amount <= 0.002f) { drawRect(solid); return@drawBehind }
+        val cols = gradient.map { lerp(solid, it, amount) }
+        val w = size.width; val h = size.height
+        val ang = phase * 2f * 3.1415927f
+        val dx = kotlin.math.cos(ang) * w * 0.5f * amount
+        val dy = kotlin.math.sin(ang) * h * 0.5f * amount
+        drawRect(
+            Brush.linearGradient(
+                cols,
+                start = Offset(w / 2 - dx, h / 2 - dy),
+                end = Offset(w / 2 + dx + w / 2, h / 2 + dy + h / 2)
+            )
+        )
+        // soft sheen sweeping left→right, fading with amount
+        val sheen = ((phase * 1.6f) % 1f) * (w + h) - h
+        drawRect(
+            Brush.linearGradient(
+                listOf(Color.Transparent, Color.White.copy(alpha = 0.10f * amount), Color.Transparent),
+                start = Offset(sheen, 0f), end = Offset(sheen + h, h)
+            )
+        )
     }
 
 // ---- components ----
 
 /**
- * Built with the low-level [Layout] + [detectTapGestures] for full control. Tap plays the SAME
- * gradient morph as the other buttons (via [morphFill]) once; [onClick] fires only when the
- * animation completes. A synchronous `playing` guard inside the tap handler drops re-taps
- * immediately (no recomposition lag), so a single button can't fire twice. Each instance owns
- * its own state, so many of them on one screen never cross-fire.
+ * Tap plays the SAME gradient morph as the other buttons (via [morphFill]) once; [onClick] fires
+ * only when the animation completes. The one-shot guard is the key: a synchronous `playing` check
+ * inside [detectTapGestures] (not clickable's `enabled`, which lags a recomposition) drops re-taps
+ * immediately, so a single button can't fire twice. Each instance owns its state -> no cross-fire.
+ * A plain Box is enough here — Layout would only matter for custom child measurement.
  */
 @Composable
 private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onClick: () -> Unit) {
@@ -186,9 +215,8 @@ private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>,
     val phase by rememberInfiniteTransition(label = "drift").animateFloat(
         0f, 1f, infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "phase"
     )
-    Layout(
-        content = { Text(text, color = Color.White, fontWeight = FontWeight.SemiBold) },
-        modifier = Modifier.fillMaxWidth().height(52.dp)
+    Box(
+        Modifier.fillMaxWidth().height(52.dp)
             .morphFill(RoundedCornerShape(14.dp), solid, gradient, progress.value, phase)
             .pointerInput(Unit) {
                 detectTapGestures {
@@ -201,12 +229,10 @@ private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>,
                         playing.value = false
                     }
                 }
-            }
-    ) { measurables, constraints ->
-        val placeable = measurables.first().measure(constraints)
-        val w = constraints.maxWidth
-        val h = if (constraints.hasFixedHeight) constraints.maxHeight else placeable.height
-        layout(w, h) { placeable.place((w - placeable.width) / 2, (h - placeable.height) / 2) }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = Color.White, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -257,9 +283,9 @@ private fun MorphSwitch(gradient: List<Color>) {
 @Composable
 private fun MorphSlider(gradient: List<Color>) {
     var v by remember { mutableFloatStateOf(0.45f) }
-    var dragging by remember { mutableStateOf(false) }
+    val dragging = remember { mutableStateOf(false) }
     val it = remember { MutableInteractionSource() }
-    val (a, p) = morphState(it, extra = if (dragging) 1f else 0f)
+    val (a, p) = morphState(it, extra = if (dragging.value) 1f else 0f)
     BoxWithConstraints(Modifier.fillMaxWidth().height(36.dp).hoverable(it)) {
         val wPx = constraints.maxWidth.toFloat()
         Box(Modifier.fillMaxWidth().height(10.dp).align(Alignment.CenterStart).clip(CircleShape).background(SolidTrack))
@@ -268,7 +294,7 @@ private fun MorphSlider(gradient: List<Color>) {
             .size(20.dp).align(Alignment.CenterStart).clip(CircleShape).background(Color.White)
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { dragging = true }, onDragEnd = { dragging = false }, onDragCancel = { dragging = false }
+                    onDragStart = { dragging.value = true }, onDragEnd = { dragging.value = false }, onDragCancel = { dragging.value = false }
                 ) { change, drag -> change.consume(); v = (v + drag.x / wPx).coerceIn(0f, 1f) }
             })
     }
