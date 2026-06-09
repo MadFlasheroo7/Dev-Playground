@@ -89,6 +89,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Pull to Dismiss", Route.PULL_DISMISS),
         LabItem("Page Curl", Route.PAGE_CURL),
         LabItem("Path Player", Route.PATH_PLAYER),
+        LabItem("Gradient Morph", Route.GRADIENT_MORPH),
         ),
     ),
     LabCategoryDef(

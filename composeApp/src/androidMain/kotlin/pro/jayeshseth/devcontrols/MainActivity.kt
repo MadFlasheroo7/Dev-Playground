@@ -333,6 +333,7 @@ import pro.jayeshseth.devcontrols.util.PermissionUtils
 import pro.jayeshseth.devcontrols.util.WifiUtils
 import pro.jayeshseth.devcontrols.widget.DevControlsWidgetReceiver
 import pro.jayeshseth.devcontrols.widget.ToggleActionCallback
+import pro.jayeshseth.devcontrols.ui.GradientMorphLabScreen
 
 /**
  * The single activity. In-app navigation is a flat [Route] enum rendered one screen
@@ -643,6 +644,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.GPS_TRACKER -> GpsTrackerScreen(onBack = onBack)
         Route.PRESENT -> PresentScreen(onBack = onBack)
         Route.DECK_EDITOR -> DeckEditorScreen(onBack = onBack)
+        Route.GRADIENT_MORPH -> GradientMorphLabScreen(onBack = onBack)
     }
 }
 
