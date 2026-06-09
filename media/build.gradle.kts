@@ -34,6 +34,9 @@ kotlin {
         }
         androidMain.dependencies {
             implementation(libs.androidx.media3.exoplayer)
+            // so ExoPlayer can also play the adaptive HLS/DASH manifests when bestPlayable() falls back to them
+            implementation(libs.androidx.media3.exoplayer.hls)
+            implementation(libs.androidx.media3.exoplayer.dash)
         }
         desktopMain.dependencies {
             implementation(libs.vlcj)

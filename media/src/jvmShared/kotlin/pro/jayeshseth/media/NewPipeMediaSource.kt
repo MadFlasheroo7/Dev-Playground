@@ -11,6 +11,7 @@ import org.schabi.newpipe.extractor.downloader.Downloader
 import org.schabi.newpipe.extractor.downloader.Request
 import org.schabi.newpipe.extractor.downloader.Response
 import org.schabi.newpipe.extractor.search.SearchInfo
+import org.schabi.newpipe.extractor.services.youtube.extractors.YoutubeStreamExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamInfo as NpStreamInfo
 
@@ -31,9 +32,13 @@ private object NewPipeMediaSource : MediaSource {
     init {
         // One-time global init: give NewPipe our OkHttp-backed downloader. Localization defaults to en/US.
         NewPipe.init(OkHttpDownloader(OkHttpClient()))
-        // Register the platform PoToken provider (Android WebView/BotGuard) so YouTube hands back real
-        // stream URLs. No-op on Desktop, where extraction degrades to an inline error. See PoTokenSetup.kt.
-        runCatching { installYoutubePoTokenProvider() }
+        // Also fetch the iOS InnerTube client. This is the crucial bit: since ~2024 YouTube gates the
+        // default (Android "reel" / web) stream URLs behind a *PoToken* (a BotGuard attestation token
+        // NewPipeExtractor can't mint), and without one the Android response comes back with no streams
+        // ("Could not get any stream"). The **iOS** client, however, still returns working, token-free
+        // progressive stream URLs (and sometimes an HLS manifest) — so enabling it is what makes
+        // resolve() actually yield playable audio/video. Verified: its URLs serve HTTP 206 audio/webm.
+        YoutubeStreamExtractor.setFetchIosClient(true)
     }
 
     override suspend fun search(query: String): List<MediaItem> = withContext(Dispatchers.IO) {
@@ -62,7 +67,16 @@ private object NewPipeMediaSource : MediaSource {
             val height = v.resolution?.substringBefore('p')?.toIntOrNull() ?: 0
             Track(url, v.resolution ?: "video", v.format?.mimeType ?: "video/*", height)
         }
-        StreamInfo(id, info.name.orEmpty(), info.uploaderName.orEmpty(), info.duration.coerceAtLeast(0), audio, video)
+        StreamInfo(
+            id = id,
+            title = info.name.orEmpty(),
+            uploader = info.uploaderName.orEmpty(),
+            durationSec = info.duration.coerceAtLeast(0),
+            audio = audio,
+            video = video,
+            hls = info.hlsUrl?.takeIf { it.isNotBlank() },     // iOS-client HLS manifest (token-free)
+            dash = info.dashMpdUrl?.takeIf { it.isNotBlank() },
+        )
     }
 }
 

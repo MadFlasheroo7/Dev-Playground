@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import pro.jayeshseth.devcontrols.media.rememberMediaController
 import pro.jayeshseth.media.MediaItem
-import pro.jayeshseth.media.bestAudio
+import pro.jayeshseth.media.bestPlayable
 import pro.jayeshseth.media.createMediaSource
 
 /**
@@ -77,8 +77,9 @@ fun MediaStreamScreen(onBack: () -> Unit) {
         scope.launch {
             error = null
             runCatching {
-                val track = source.resolve(item.id).bestAudio() ?: throw IllegalStateException("No audio stream")
-                controller.play(track.url); nowPlaying = item
+                val url = source.resolve(item.id).bestPlayable()
+                    ?: throw IllegalStateException("No playable stream (YouTube may have blocked extraction)")
+                controller.play(url); nowPlaying = item
             }.onFailure { error = "Playback failed: ${it.message}" }
         }
     }

@@ -2,7 +2,10 @@ package pro.jayeshseth.media
 
 import android.content.Context
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import okhttp3.OkHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,9 +17,17 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.media3.common.MediaItem as Media3Item
 
-/** [MediaController] backed by Media3 / ExoPlayer. Plays the resolved progressive audio/video URL. */
+/**
+ * [MediaController] backed by Media3 / ExoPlayer. Plays the resolved progressive audio/video URL via a
+ * [YoutubeRangeDataSource] so YouTube's bounded-range requirement is satisfied (a plain ExoPlayer would
+ * get HTTP 403 on its open-ended range requests).
+ */
+@UnstableApi
 class AndroidMediaController(context: Context) : MediaController {
-    private val player = ExoPlayer.Builder(context.applicationContext).build()
+    private val httpClient = OkHttpClient()
+    private val player = ExoPlayer.Builder(context.applicationContext)
+        .setMediaSourceFactory(DefaultMediaSourceFactory(YoutubeRangeDataSource.Factory(httpClient)))
+        .build()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val _playing = MutableStateFlow(false)
