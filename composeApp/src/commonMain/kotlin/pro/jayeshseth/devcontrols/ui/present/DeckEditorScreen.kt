@@ -350,6 +350,31 @@ private fun SlideProps(
     }
 
     Spacer(Modifier.height(16.dp))
+    Text("Code background (Compose canvas)", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Mini draw language: background/circle/line/rect + repeat(n){…}. Vars t,w,h,i,n; funcs sin,cos,fract,mod… " +
+            "Colors are 0..1. Runs on every platform.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        AssistChip(onClick = { updateSlide { it.copy(bgCanvasCode = CANVAS_CODE_SAMPLE) } }, label = { Text("Sample") })
+        if (!slide.bgCanvasCode.isNullOrBlank()) {
+            AssistChip(onClick = { updateSlide { it.copy(bgCanvasCode = null) } }, label = { Text("Clear") })
+        }
+    }
+    OutlinedTextField(
+        value = slide.bgCanvasCode ?: "",
+        onValueChange = { updateSlide { s -> s.copy(bgCanvasCode = it.ifBlank { null }) } },
+        label = { Text("Canvas code") },
+        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp),
+        modifier = Modifier.fillMaxWidth().height(160.dp)
+    )
+    slide.bgCanvasCode?.takeIf { it.isNotBlank() }?.let { code ->
+        val err = CanvasScript.parse(code).exceptionOrNull()?.message
+        if (err != null) Text("⚠ $err", style = MaterialTheme.typography.bodySmall, color = Color(0xFFE53935))
+    }
+
+    Spacer(Modifier.height(16.dp))
     Text("Code background (SkSL/AGSL)", style = MaterialTheme.typography.titleMedium)
     Text(
         "Write a shader for an animated background. Uniforms: float2 iResolution, float iTime. " +

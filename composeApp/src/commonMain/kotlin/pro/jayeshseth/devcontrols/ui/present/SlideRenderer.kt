@@ -50,9 +50,11 @@ fun SlideBackground(slide: Slide, modifier: Modifier = Modifier) {
         Box(Modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
     }
     val shader = slide.bgShader
+    val canvasCode = slide.bgCanvasCode
     val canvas = slide.bgCanvas
     when {
         !shader.isNullOrBlank() -> ShaderBackground(shader, modifier.fillMaxSize()) { gradient() }
+        !canvasCode.isNullOrBlank() -> Box(modifier.fillMaxSize()) { gradient(); CanvasCodeBackground(canvasCode, Modifier.fillMaxSize()) }
         !canvas.isNullOrBlank() -> Box(modifier.fillMaxSize()) { gradient(); CanvasBackground(canvas, Modifier.fillMaxSize()) }
         else -> Box(modifier.fillMaxSize()) { gradient() }
     }

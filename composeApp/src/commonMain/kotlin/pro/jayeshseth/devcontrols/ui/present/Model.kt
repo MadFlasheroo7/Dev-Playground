@@ -35,6 +35,9 @@ data class Slide(
     /** Optional key of a built-in Compose-Canvas animated background (pure Compose, all platforms).
      *  Drawn over the [bgColors] gradient. [bgShader] takes precedence if both are set. */
     val bgCanvas: String? = null,
+    /** Optional hand-written script in the [CanvasScript] draw language (pure Compose, all platforms),
+     *  drawn over the gradient. Precedence: bgShader > bgCanvasCode > bgCanvas > gradient. */
+    val bgCanvasCode: String? = null,
 )
 
 data class Deck(val title: String, val slides: List<Slide>)

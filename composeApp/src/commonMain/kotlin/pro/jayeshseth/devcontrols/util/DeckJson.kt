@@ -49,6 +49,7 @@ object DeckJson {
                         put("notes", s.notes)
                         s.bgShader?.let { put("bgShader", it) }
                         s.bgCanvas?.let { put("bgCanvas", it) }
+                        s.bgCanvasCode?.let { put("bgCanvasCode", it) }
                         putJsonArray("elements") {
                             s.elements.forEach { e ->
                                 addJsonObject {
@@ -105,6 +106,7 @@ object DeckJson {
                 notes = so["notes"]?.jsonPrimitive?.contentOrNull ?: "",
                 bgShader = so["bgShader"]?.jsonPrimitive?.contentOrNull,
                 bgCanvas = so["bgCanvas"]?.jsonPrimitive?.contentOrNull,
+                bgCanvasCode = so["bgCanvasCode"]?.jsonPrimitive?.contentOrNull,
             )
         }
         return Deck(root["title"]?.jsonPrimitive?.contentOrNull ?: "Imported Deck", slides)
