@@ -367,6 +367,7 @@ private fun SlideProps(
         onValueChange = { updateSlide { s -> s.copy(bgCanvasCode = it.ifBlank { null }) } },
         label = { Text("Canvas code") },
         textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp),
+        visualTransformation = CanvasCodeHighlighter,
         modifier = Modifier.fillMaxWidth().height(160.dp)
     )
     slide.bgCanvasCode?.takeIf { it.isNotBlank() }?.let { code ->
@@ -394,6 +395,7 @@ private fun SlideProps(
         onValueChange = { updateSlide { s -> s.copy(bgShader = it.ifBlank { null }) } },
         label = { Text("Shader source") },
         textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp),
+        visualTransformation = ShaderHighlighter,
         modifier = Modifier.fillMaxWidth().height(160.dp)
     )
 
