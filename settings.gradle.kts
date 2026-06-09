@@ -25,4 +25,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DevControls"
 include(":composeApp")
+include(":media")
  
