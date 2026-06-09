@@ -25,5 +25,7 @@ actual fun rememberDeckExporter(): DeckExporter? = null
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
 
+// TODO when wasm is re-enabled: document.documentElement.requestFullscreen() +
+// screen.orientation.lock("landscape") via kotlinx-browser. No-op for now.
 @Composable
-actual fun LockLandscape() { /* no-op on web */ }
+actual fun PresentationMode() { /* no-op on web until wasm target returns */ }

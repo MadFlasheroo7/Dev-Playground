@@ -100,14 +100,26 @@ actual fun rememberToaster(): (String) -> Unit {
 }
 
 @Composable
-actual fun LockLandscape() {
+actual fun PresentationMode() {
     val ctx = LocalContext.current
     DisposableEffect(Unit) {
         var c: android.content.Context = ctx
         while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
         val activity = c as? android.app.Activity
-        val prev = activity?.requestedOrientation
+        val prevOrientation = activity?.requestedOrientation
         activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        onDispose { if (prev != null) activity.requestedOrientation = prev }
+
+        val window = activity?.window
+        val controller = window?.let { w ->
+            androidx.core.view.WindowCompat.getInsetsController(w, w.decorView)
+        }
+        controller?.systemBarsBehavior =
+            androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+
+        onDispose {
+            if (prevOrientation != null) activity.requestedOrientation = prevOrientation
+            controller?.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
     }
 }

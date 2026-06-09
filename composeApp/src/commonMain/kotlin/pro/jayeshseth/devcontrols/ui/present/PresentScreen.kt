@@ -35,7 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import pro.jayeshseth.devcontrols.BackHandlerCommon
-import pro.jayeshseth.devcontrols.platform.LockLandscape
+import pro.jayeshseth.devcontrols.platform.PresentationMode
 
 /** Present mode — full-screen deck with per-slide transitions and shared-element morphs. */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -44,7 +44,7 @@ fun PresentScreen(onBack: () -> Unit, deck: Deck = sampleDeck()) {
     var index by remember { mutableIntStateOf(0) }
     fun go(d: Int) { index = (index + d).coerceIn(0, deck.slides.lastIndex) }
     BackHandlerCommon(enabled = true) { onBack() }
-    LockLandscape()
+    PresentationMode()
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         SharedTransitionLayout(Modifier.fillMaxSize()) {

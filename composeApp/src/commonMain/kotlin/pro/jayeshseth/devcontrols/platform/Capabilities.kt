@@ -32,6 +32,10 @@ expect fun rememberDeckExporter(): DeckExporter?
 @Composable
 expect fun rememberToaster(): (String) -> Unit
 
-/** Forces landscape while composed (Android); no-op elsewhere. */
+/**
+ * While composed, puts the host into presentation mode — fullscreen + landscape — and restores the
+ * previous state on exit. Android: immersive (hidden system bars) + sensor-landscape. Desktop:
+ * fullscreen window. Web: fullscreen + orientation lock. iOS: stub.
+ */
 @Composable
-expect fun LockLandscape()
+expect fun PresentationMode()

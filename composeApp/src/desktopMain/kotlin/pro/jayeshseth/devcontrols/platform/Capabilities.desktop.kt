@@ -87,5 +87,15 @@ actual fun rememberDeckExporter(): DeckExporter? = remember {
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
 
+/** Set by the desktop entry point so [PresentationMode] can toggle the window to fullscreen. */
+val LocalWindowState = androidx.compose.runtime.staticCompositionLocalOf<androidx.compose.ui.window.WindowState?> { null }
+
 @Composable
-actual fun LockLandscape() { /* no-op on desktop */ }
+actual fun PresentationMode() {
+    val ws = LocalWindowState.current
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val previous = ws?.placement
+        ws?.placement = androidx.compose.ui.window.WindowPlacement.Fullscreen
+        onDispose { if (previous != null) ws.placement = previous }
+    }
+}
