@@ -32,6 +32,9 @@ data class Slide(
      *  `uniform float2 iResolution; uniform float iTime;` and `half4 main(float2 fc)`. Falls
      *  back to [bgColors] gradient if null, unsupported, or it fails to compile. */
     val bgShader: String? = null,
+    /** Optional key of a built-in Compose-Canvas animated background (pure Compose, all platforms).
+     *  Drawn over the [bgColors] gradient. [bgShader] takes precedence if both are set. */
+    val bgCanvas: String? = null,
 )
 
 data class Deck(val title: String, val slides: List<Slide>)

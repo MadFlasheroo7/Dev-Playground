@@ -338,6 +338,18 @@ private fun SlideProps(
     }
 
     Spacer(Modifier.height(16.dp))
+    Text("Canvas background (Compose)", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Built-in animated Compose-Canvas backgrounds (work on every platform), drawn over the gradient.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        canvasBgKeys.forEach { key ->
+            FilterChip(slide.bgCanvas == key, { updateSlide { it.copy(bgCanvas = if (it.bgCanvas == key) null else key) } }, { Text(key) })
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
     Text("Code background (SkSL/AGSL)", style = MaterialTheme.typography.titleMedium)
     Text(
         "Write a shader for an animated background. Uniforms: float2 iResolution, float iTime. " +

@@ -39,16 +39,22 @@ import pro.jayeshseth.devcontrols.platform.ShaderBackground
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-/** The slide background: a hand-coded animated shader if [Slide.bgShader] is set, else the gradient. */
+/**
+ * The slide background, in precedence order: a hand-coded animated [Slide.bgShader] (with gradient
+ * fallback), else a built-in Compose-Canvas background ([Slide.bgCanvas], drawn over the gradient),
+ * else just the gradient.
+ */
 @Composable
 fun SlideBackground(slide: Slide, modifier: Modifier = Modifier) {
-    val src = slide.bgShader
-    if (src.isNullOrBlank()) {
-        Box(modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
-    } else {
-        ShaderBackground(src, modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
-        }
+    val gradient: @Composable () -> Unit = {
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(slide.bgColors.map { Color(it) })))
+    }
+    val shader = slide.bgShader
+    val canvas = slide.bgCanvas
+    when {
+        !shader.isNullOrBlank() -> ShaderBackground(shader, modifier.fillMaxSize()) { gradient() }
+        !canvas.isNullOrBlank() -> Box(modifier.fillMaxSize()) { gradient(); CanvasBackground(canvas, Modifier.fillMaxSize()) }
+        else -> Box(modifier.fillMaxSize()) { gradient() }
     }
 }
 
