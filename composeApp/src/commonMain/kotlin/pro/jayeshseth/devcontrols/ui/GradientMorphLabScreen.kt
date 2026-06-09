@@ -13,7 +13,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -63,6 +66,10 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import kotlin.time.TimeSource
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val GA = listOf(Color(0xFF4C6FFF), Color(0xFF22D3A6))
 private val GB = listOf(Color(0xFF22FFAA), Color(0xFF4C6FFF))
@@ -92,22 +99,24 @@ fun GradientMorphLabScreen(onBack: () -> Unit) {
             Text("Solid at rest — hover or press/drag to morph to a gradient.",
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            // ---- one-shot action buttons (debounced): tap -> animate once -> fire after ----
-            val fires = remember { mutableStateListOf<String>() }
+            // ---- hold-to-morph action buttons + interaction log (press / long-press / hover / click) ----
+            val events = remember { mutableStateListOf<String>() }
             var fireCount by remember { mutableIntStateOf(0) }
-            Section("Action buttons — one-shot, fires after the animation")
-            Text("Tap fast / mash several at once: each fires exactly once, only when its sweep finishes; " +
-                "taps during the animation are ignored.",
+            fun add(s: String) { events.add(0, s); while (events.size > 12) events.removeAt(events.size - 1) }
+            Section("Action buttons — hold-to-morph, with interaction log")
+            Text("Hover (desktop) or press & hold (touch): the morph stays until you let go. The log below " +
+                "tracks press / long-press / release+duration / hover / click so you can verify it — and that " +
+                "each click fires exactly once, even with many buttons.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             val actions = listOf("Pay" to GA, "Confirm" to GB, "Submit" to GD, "Save" to GA, "Send" to GB, "Delete" to GC, "Sync" to GD, "Export" to GC)
             actions.forEach { (label, grad) ->
-                MorphActionButton(label, SolidA, grad) { fireCount++; fires.add(0, "#$fireCount  $label") }
+                MorphActionButton(label, SolidA, grad, onEvent = { add(it) }) { fireCount++; add("$label  ✓ click #$fireCount") }
             }
             Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFF11152A)).padding(12.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("onClick fires: $fireCount", color = Color(0xFF22FFAA), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    if (fires.isEmpty()) Text("(no taps yet)", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                    fires.take(6).forEach { Text(it, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
+                    if (events.isEmpty()) Text("(interact to see events)", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    events.forEach { Text(it, color = Color.White.copy(alpha = 0.85f), fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
                 }
             }
 
@@ -203,9 +212,33 @@ fun Modifier.morphFill(shape: Shape, solid: Color, gradient: List<Color>, amount
  * visual and the click, so it can't desync; each instance owns its state -> no cross-fire.
  */
 @Composable
-private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onClick: () -> Unit) {
+private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onEvent: (String) -> Unit, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val (a, p) = morphState(interaction)
+
+    // Track raw interactions so the harness can verify press/long-press/hold/release behaviour.
+    LaunchedEffect(interaction) {
+        var pressMark: TimeSource.Monotonic.ValueTimeMark? = null
+        var longJob: Job? = null
+        interaction.interactions.collect { i ->
+            when (i) {
+                is PressInteraction.Press -> {
+                    pressMark = TimeSource.Monotonic.markNow()
+                    onEvent("$text  ▼ press")
+                    longJob = launch { delay(500); onEvent("$text  ⏳ long-press (still held)") }
+                }
+                is PressInteraction.Release -> {
+                    longJob?.cancel()
+                    val ms = pressMark?.elapsedNow()?.inWholeMilliseconds ?: 0L
+                    onEvent("$text  ▲ release ${ms}ms" + if (ms >= 500) "  [LONG]" else "")
+                }
+                is PressInteraction.Cancel -> { longJob?.cancel(); onEvent("$text  ✕ cancel") }
+                is HoverInteraction.Enter -> onEvent("$text  ⊙ hover-in")
+                is HoverInteraction.Exit -> onEvent("$text  ◌ hover-out")
+            }
+        }
+    }
+
     Box(
         Modifier.fillMaxWidth().height(52.dp)
             .graphicsLayer { val s = 1f + 0.02f * a; scaleX = s; scaleY = s }
