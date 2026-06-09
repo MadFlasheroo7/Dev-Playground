@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -45,8 +46,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -59,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -172,36 +172,41 @@ fun Modifier.morphFill(shape: Shape, solid: Color, gradient: List<Color>, amount
 // ---- components ----
 
 /**
- * Tap/click plays the gradient sweep once; the button is non-clickable while it animates, and
- * [onClick] fires only when the sweep completes. Each instance owns its animation, so a screen
- * full of these never produces duplicate/cross fires — and re-taps mid-animation are dropped.
+ * Built with the low-level [Layout] + [detectTapGestures] for full control. Tap plays the SAME
+ * gradient morph as the other buttons (via [morphFill]) once; [onClick] fires only when the
+ * animation completes. A synchronous `playing` guard inside the tap handler drops re-taps
+ * immediately (no recomposition lag), so a single button can't fire twice. Each instance owns
+ * its own state, so many of them on one screen never cross-fire.
  */
 @Composable
 private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onClick: () -> Unit) {
     val progress = remember { Animatable(0f) }
-    var playing by remember { mutableStateOf(false) }
+    val playing = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    Box(
-        Modifier.fillMaxWidth().height(52.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .drawBehind {
-                drawRect(solid)
-                val rw = size.width * progress.value
-                if (rw > 0f) clipRect(0f, 0f, rw, size.height) { drawRect(Brush.horizontalGradient(gradient)) }
-            }
-            .clickable(enabled = !playing) {
-                playing = true
-                scope.launch {
-                    progress.snapTo(0f)
-                    progress.animateTo(1f, tween(480))
-                    onClick()                       // fire only after the animation
-                    progress.animateTo(0f, tween(220))
-                    playing = false
+    val phase by rememberInfiniteTransition(label = "drift").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "phase"
+    )
+    Layout(
+        content = { Text(text, color = Color.White, fontWeight = FontWeight.SemiBold) },
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+            .morphFill(RoundedCornerShape(14.dp), solid, gradient, progress.value, phase)
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    if (playing.value) return@detectTapGestures   // synchronous: re-taps dropped
+                    playing.value = true
+                    scope.launch {
+                        progress.animateTo(1f, tween(360))
+                        onClick()                                   // fire only after the animation
+                        progress.animateTo(0f, tween(300))
+                        playing.value = false
+                    }
                 }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text, color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+    ) { measurables, constraints ->
+        val placeable = measurables.first().measure(constraints)
+        val w = constraints.maxWidth
+        val h = if (constraints.hasFixedHeight) constraints.maxHeight else placeable.height
+        layout(w, h) { placeable.place((w - placeable.width) / 2, (h - placeable.height) / 2) }
     }
 }
 
