@@ -6,6 +6,12 @@ data class LabCategoryDef(val title: String, val items: List<LabItem>)
 
 val labCategories: List<LabCategoryDef> = listOf(
     LabCategoryDef(
+        "Media",
+        listOf(
+        LabItem("YouTube Stream", Route.MEDIA_STREAM),
+        ),
+    ),
+    LabCategoryDef(
         "System & ADB",
         listOf(
         LabItem("adb_g — local shell", Route.ADB_CONSOLE),

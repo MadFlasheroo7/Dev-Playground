@@ -63,6 +63,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.MARBLE_RUN -> pro.jayeshseth.devcontrols.ui.MarbleRunLabScreen(onBack = onBack)
         Route.MARCHING_SQUARES -> pro.jayeshseth.devcontrols.ui.MarchingSquaresLabScreen(onBack = onBack)
         Route.MAZE -> pro.jayeshseth.devcontrols.ui.MazeLabScreen(onBack = onBack)
+        Route.MEDIA_STREAM -> pro.jayeshseth.devcontrols.ui.MediaStreamScreen(onBack = onBack)
         Route.MEMORY_MATCH -> pro.jayeshseth.devcontrols.ui.MemoryMatchScreen(onBack = onBack)
         Route.MESH_GALLERY -> pro.jayeshseth.devcontrols.ui.MeshGalleryScreen(onBack = onBack)
         Route.MORPHING_ICONS -> pro.jayeshseth.devcontrols.ui.visualfx.MorphingIconsScreen(onBack = onBack)
@@ -189,6 +190,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.MARBLE_RUN,
     Route.MARCHING_SQUARES,
     Route.MAZE,
+    Route.MEDIA_STREAM,
     Route.MEMORY_MATCH,
     Route.MESH_GALLERY,
     Route.MORPHING_ICONS,

@@ -42,6 +42,7 @@ kotlin {
             implementation(compose.animation)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
+            implementation(project(":media"))
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
