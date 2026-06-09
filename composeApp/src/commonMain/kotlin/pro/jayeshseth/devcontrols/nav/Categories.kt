@@ -89,7 +89,6 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Pull to Dismiss", Route.PULL_DISMISS),
         LabItem("Page Curl", Route.PAGE_CURL),
         LabItem("Path Player", Route.PATH_PLAYER),
-        LabItem("Gradient Morph", Route.GRADIENT_MORPH),
         ),
     ),
     LabCategoryDef(
@@ -306,6 +305,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Components",
         listOf(
         LabItem("✨ Mesh Components", Route.MESH_GALLERY),
+        LabItem("Gradient Morph", Route.GRADIENT_MORPH),
         LabItem("Segmented Control", Route.SEGMENTED),
         LabItem("Speed-Dial FAB", Route.SPEED_DIAL),
         LabItem("Bottom Sheet", Route.BOTTOM_SHEET),
