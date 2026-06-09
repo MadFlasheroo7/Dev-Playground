@@ -219,16 +219,22 @@ private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>,
         Modifier.fillMaxWidth().height(52.dp)
             .morphFill(RoundedCornerShape(14.dp), solid, gradient, progress.value, phase)
             .pointerInput(Unit) {
-                detectTapGestures {
-                    if (playing.value) return@detectTapGestures   // synchronous: re-taps dropped
-                    playing.value = true
-                    scope.launch {
-                        progress.animateTo(1f, tween(360))
-                        onClick()                                   // fire only after the animation
-                        progress.animateTo(0f, tween(300))
-                        playing.value = false
+                detectTapGestures(
+                    onPress = {
+                        // Start the morph the instant the finger goes down (works for long-press too),
+                        // not on release. Synchronous guard drops presses while one is playing.
+                        if (!playing.value) {
+                            playing.value = true
+                            scope.launch {
+                                progress.snapTo(0f)
+                                progress.animateTo(1f, tween(900))   // slow, visible bloom
+                                onClick()                            // fire only after the animation
+                                progress.animateTo(0f, tween(450))
+                                playing.value = false
+                            }
+                        }
                     }
-                }
+                )
             },
         contentAlignment = Alignment.Center
     ) {
