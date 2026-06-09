@@ -1,6 +1,5 @@
 package pro.jayeshseth.devcontrols.ui
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -13,7 +12,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -47,10 +45,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontFamily
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -201,41 +197,21 @@ fun Modifier.morphFill(shape: Shape, solid: Color, gradient: List<Color>, amount
 // ---- components ----
 
 /**
- * Tap plays the SAME gradient morph as the other buttons (via [morphFill]) once; [onClick] fires
- * only when the animation completes. The one-shot guard is the key: a synchronous `playing` check
- * inside [detectTapGestures] (not clickable's `enabled`, which lags a recomposition) drops re-taps
- * immediately, so a single button can't fire twice. Each instance owns its state -> no cross-fire.
- * A plain Box is enough here — Layout would only matter for custom child measurement.
+ * Hold-to-morph button: while hovered (desktop/web) or pressed/long-pressed (everywhere) it morphs
+ * to the gradient and keeps flowing, then springs smoothly back to the solid on release — same feel
+ * as the other components. [onClick] fires once per click. The interaction source drives both the
+ * visual and the click, so it can't desync; each instance owns its state -> no cross-fire.
  */
 @Composable
 private fun MorphActionButton(text: String, solid: Color, gradient: List<Color>, onClick: () -> Unit) {
-    val progress = remember { Animatable(0f) }
-    val playing = remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val phase by rememberInfiniteTransition(label = "drift").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(4000), RepeatMode.Reverse), label = "phase"
-    )
+    val interaction = remember { MutableInteractionSource() }
+    val (a, p) = morphState(interaction)
     Box(
         Modifier.fillMaxWidth().height(52.dp)
-            .morphFill(RoundedCornerShape(14.dp), solid, gradient, progress.value, phase)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        // Start the morph the instant the finger goes down (works for long-press too),
-                        // not on release. Synchronous guard drops presses while one is playing.
-                        if (!playing.value) {
-                            playing.value = true
-                            scope.launch {
-                                progress.snapTo(0f)
-                                progress.animateTo(1f, tween(900))   // slow, visible bloom
-                                onClick()                            // fire only after the animation
-                                progress.animateTo(0f, tween(450))
-                                playing.value = false
-                            }
-                        }
-                    }
-                )
-            },
+            .graphicsLayer { val s = 1f + 0.02f * a; scaleX = s; scaleY = s }
+            .morphFill(RoundedCornerShape(14.dp), solid, gradient, a, p)
+            .hoverable(interaction)
+            .clickable(interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(text, color = Color.White, fontWeight = FontWeight.SemiBold)
