@@ -9,15 +9,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// AGP 9.2.1's kmp-library plugin pulls Kotlin stdlib 2.3.21; align it to the 2.2.10 compiler (klib match).
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
-            useVersion("2.2.20")
-        }
-    }
-}
-
 kotlin {
     // :composeApp is now a Compose Multiplatform LIBRARY (android+desktop+wasm); the Android *application*
     // lives in the thin :androidApp module. This avoids com.android.application + KMP (which needs the
@@ -53,6 +44,11 @@ kotlin {
             implementation(compose.animation)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.datetime) // multiplatform date/time (replaces java.util.Calendar etc. for wasm)
+            implementation(project.dependencies.platform(libs.kotlincrypto.hash.bom))
+            implementation(libs.kotlincrypto.md)
+            implementation(libs.kotlincrypto.sha1)
+            implementation(libs.kotlincrypto.sha2)
             implementation(project(":media"))
         }
         androidMain.dependencies {

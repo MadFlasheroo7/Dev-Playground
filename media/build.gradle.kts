@@ -6,14 +6,6 @@ plugins {
     alias(libs.plugins.android.kmp.library)
 }
 
-// SPIKE diagnostic: force Kotlin stdlib to match the 2.2.10 compiler (AGP9 kmp-library pulls 2.3.21).
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
-            useVersion("2.2.20")
-        }
-    }
-}
 
 kotlin {
     // com.android.kotlin.multiplatform.library: the Android target is declared here (no top-level android{}).

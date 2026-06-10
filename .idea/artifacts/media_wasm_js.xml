@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="media-wasm-js">
+    <output-path>$PROJECT_DIR$/media/build/libs</output-path>
+    <root id="archive" name="media-wasm-js.jar" />
+  </artifact>
+</component>

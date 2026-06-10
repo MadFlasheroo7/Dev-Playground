@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -87,7 +92,7 @@ private fun Wheel(count: Int, onSelected: (Int) -> Unit, modifier: Modifier = Mo
             items((0 until count).toList()) { i ->
                 val selected = i == center
                 Box(Modifier.fillMaxWidth().height(itemH), contentAlignment = Alignment.Center) {
-                    Text("%02d".format(i), textAlign = TextAlign.Center,
+                    Text((i).pad(2), textAlign = TextAlign.Center,
                         fontSize = if (selected) 28.sp else 20.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)

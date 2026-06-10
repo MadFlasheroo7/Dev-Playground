@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,7 +95,7 @@ fun TouchInternalsLabScreen(onBack: () -> Unit) {
                     Text("active pointers: ${contacts.size}", color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                     contacts.forEach { c ->
                         Text(
-                            "  id=${c.id} type=${c.type} p=${"%.2f".format(c.pressure)} (${c.pos.x.toInt()},${c.pos.y.toInt()})",
+                            "  id=${c.id} type=${c.type} p=${fmt(c.pressure, 2)} (${c.pos.x.toInt()},${c.pos.y.toInt()})",
                             color = Color.White, fontFamily = FontFamily.Monospace, fontSize = 11.sp
                         )
                     }

@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
@@ -41,9 +46,9 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FlipClockLabScreen(onBack: () -> Unit) {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var now by remember { mutableLongStateOf(nowMillis()) }
     LaunchedEffect(Unit) {
-        while (true) { now = System.currentTimeMillis(); delay(250) }
+        while (true) { now = nowMillis(); delay(250) }
     }
     val totalSec = (now / 1000)
     val h = ((totalSec / 3600) % 24).toInt()

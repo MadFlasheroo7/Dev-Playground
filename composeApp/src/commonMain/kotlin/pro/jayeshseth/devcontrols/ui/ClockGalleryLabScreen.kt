@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,8 +48,8 @@ import kotlin.math.sin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClockGalleryLabScreen(onBack: () -> Unit) {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { withFrameNanos { now = System.currentTimeMillis() } } }
+    var now by remember { mutableLongStateOf(nowMillis()) }
+    LaunchedEffect(Unit) { while (true) { withFrameNanos { now = nowMillis() } } }
     val cal = remember(now / 1000) { Calendar.getInstance().apply { timeInMillis = now } }
     val h = cal.get(Calendar.HOUR_OF_DAY); val mn = cal.get(Calendar.MINUTE); val s = cal.get(Calendar.SECOND)
 

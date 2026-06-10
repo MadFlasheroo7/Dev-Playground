@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui.privacy
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +37,7 @@ import java.util.zip.CRC32
 fun HashingScreen(onBack: () -> Unit) {
     var input by remember { mutableStateOf("hello world") }
     fun digest(algo: String) = runCatching {
-        MessageDigest.getInstance(algo).digest(input.toByteArray()).joinToString("") { "%02x".format(it) }
+        MessageDigest.getInstance(algo).digest(input.toByteArray()).joinToString("") { hex2(it) }
     }.getOrDefault("—")
     val crc = remember(input) { CRC32().apply { update(input.toByteArray()) }.value.toString(16) }
 

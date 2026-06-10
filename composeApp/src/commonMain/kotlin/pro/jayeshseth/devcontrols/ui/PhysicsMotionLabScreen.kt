@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
@@ -119,7 +124,7 @@ fun PhysicsMotionLabScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("dampingRatio = ${"%.2f".format(damping)}  (low = bouncy)", style = MaterialTheme.typography.labelMedium)
+            Text("dampingRatio = ${fmt(damping, 2)}  (low = bouncy)", style = MaterialTheme.typography.labelMedium)
             Slider(value = damping, onValueChange = { damping = it }, valueRange = 0.1f..1f)
             Text("stiffness = ${stiffness.toInt()}  (high = snappy)", style = MaterialTheme.typography.labelMedium)
             Slider(value = stiffness, onValueChange = { stiffness = it }, valueRange = 20f..2000f)

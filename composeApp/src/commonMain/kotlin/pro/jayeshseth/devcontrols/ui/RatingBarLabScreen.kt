@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -71,7 +76,7 @@ fun RatingBarLabScreen(onBack: () -> Unit) {
                     }
             )
             Spacer(Modifier.height(16.dp))
-            Text("${"%.1f".format(rating)} / 5", fontSize = 26.sp, color = MaterialTheme.colorScheme.primary)
+            Text("${fmt(rating, 1)} / 5", fontSize = 26.sp, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

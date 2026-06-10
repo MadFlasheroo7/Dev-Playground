@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui.timedate
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,8 +45,8 @@ private val ZONES = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorldClockScreen(onBack: () -> Unit) {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
+    var now by remember { mutableLongStateOf(nowMillis()) }
+    LaunchedEffect(Unit) { while (true) { now = nowMillis(); delay(1000) } }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("World Clock") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },

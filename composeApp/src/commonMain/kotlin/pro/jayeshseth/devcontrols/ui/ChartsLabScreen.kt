@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -89,7 +94,7 @@ fun ChartsLabScreen(onBack: () -> Unit) {
                     }
             )
             if (chart == Chart.Line && scrub >= 0) {
-                Text("point ${scrub + 1} = ${"%.2f".format(data[scrub])}", style = MaterialTheme.typography.bodyMedium)
+                Text("point ${scrub + 1} = ${fmt(data[scrub], 2)}", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

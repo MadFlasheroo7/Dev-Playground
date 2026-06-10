@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui.timedate
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +49,7 @@ fun StopwatchScreen(onBack: () -> Unit) {
     val laps = remember { mutableStateListOf<Long>() }
 
     LaunchedEffect(running) {
-        if (running) { lastStart = System.currentTimeMillis() - elapsed; while (running) { elapsed = System.currentTimeMillis() - lastStart; delay(33) } }
+        if (running) { lastStart = nowMillis() - elapsed; while (running) { elapsed = nowMillis() - lastStart; delay(33) } }
     }
     fun fmt(ms: Long) = "%02d:%02d.%02d".format(ms / 60000, (ms / 1000) % 60, (ms / 10) % 100)
 

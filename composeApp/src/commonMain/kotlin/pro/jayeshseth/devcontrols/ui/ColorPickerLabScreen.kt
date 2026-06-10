@@ -1,5 +1,10 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.hex2
+import pro.jayeshseth.devcontrols.util.pad
+import pro.jayeshseth.devcontrols.util.nowMillis
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -116,7 +121,7 @@ fun ColorPickerLabScreen(onBack: () -> Unit) {
                 Spacer(Modifier.size(16.dp))
                 Column {
                     Text("#%06X".format(0xFFFFFF and selected.toArgb()), fontFamily = FontFamily.Monospace)
-                    Text("H ${hue.toInt()}  S ${"%.2f".format(sat)}  V ${"%.2f".format(value)}",
+                    Text("H ${hue.toInt()}  S ${fmt(sat, 2)}  V ${fmt(value, 2)}",
                         fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
                 }
             }
