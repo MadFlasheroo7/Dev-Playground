@@ -362,7 +362,7 @@ class MainActivity : ComponentActivity() {
                     notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
-            AppRoot(initialRoute = if (openKioskPicker) Route.KIOSK_PICKER else Route.MEDIA_STREAM) // TEMP: land on Media; revert to Route.MAIN
+            AppRoot(initialRoute = if (openKioskPicker) Route.KIOSK_PICKER else Route.MAIN)
         }
     }
 }

@@ -19,6 +19,7 @@ kotlin {
     }
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs { browser() }
+    js(IR) { browser() }
     // iOS targets added later (Media 5).
 
     // Keep the default hierarchy (commonMain → every target incl. wasm) AND add a jvmShared intermediate
@@ -33,14 +34,15 @@ kotlin {
         val jvmShared by creating { dependsOn(commonMain) }
         val androidMain by getting { dependsOn(jvmShared) }
         val desktopMain by getting { dependsOn(jvmShared) }
-        val wasmJsMain by getting
+        // webMain (js + wasmJs) is provided by the default hierarchy template; Piped REST search lives there.
+        val webMain by getting
 
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
         }
-        wasmJsMain.dependencies {
+        webMain.dependencies {
             implementation(libs.ktor.client.js) // browser fetch engine — search via the Piped REST API
         }
         jvmShared.dependencies {

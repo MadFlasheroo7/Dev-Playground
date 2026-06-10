@@ -13,19 +13,20 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pro.jayeshseth.media.MediaController
 
-// --- JS bridge to the YouTube IFrame Player (window.__yt is defined in index.html) ---
-private fun ytLoad(id: String) { js("window.__yt && window.__yt.load(id)") }
-private fun ytPlay() { js("window.__yt && window.__yt.play()") }
-private fun ytPause() { js("window.__yt && window.__yt.pause()") }
-private fun ytSeek(sec: Double) { js("window.__yt && window.__yt.seek(sec)") }
-private fun ytTimeMs(): Double = js("(window.__yt && window.__yt.timeMs()) || 0")
-private fun ytDurationMs(): Double = js("(window.__yt && window.__yt.durationMs()) || 0")
-private fun ytState(): Double = js("(window.__yt && window.__yt.state()) ?? -1")
+// JS bridge to the YouTube IFrame Player (window.__yt, defined in index.html). The js() intrinsic is
+// target-specific, so these are expect/actual (identical actuals for the js and wasmJs targets).
+internal expect fun ytLoad(id: String)
+internal expect fun ytPlay()
+internal expect fun ytPause()
+internal expect fun ytSeek(sec: Double)
+internal expect fun ytTimeMs(): Double
+internal expect fun ytDurationMs(): Double
+internal expect fun ytState(): Double
 
 /**
- * Web [MediaController] backed by the **YouTube IFrame Player API** (a hidden 1×1 iframe managed by the
- * `window.__yt` helper in index.html). Plays by video id — no stream extraction, so no PoToken/CORS
- * issues. State is polled from the player (YT states: 1=playing, 3=buffering).
+ * Web [MediaController] backed by the **YouTube IFrame Player API** (a hidden offscreen iframe managed by
+ * the `window.__yt` helper in index.html). Plays by video id — no stream extraction, so no PoToken/CORS
+ * issues. State is polled from the player (YT states: 1=playing, 3=buffering). Shared by js + wasmJs.
  */
 private class WebMediaController : MediaController {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())

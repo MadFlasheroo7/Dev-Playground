@@ -1,6 +1,8 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="media">
     <output-path>$PROJECT_DIR$/media/build/libs</output-path>
-    <root id="archive" name="media.jar" />
+    <root id="archive" name="media.jar">
+      <element id="module-output" name="DevControls.media.androidMain" />
+    </root>
   </artifact>
 </component>

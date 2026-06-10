@@ -28,9 +28,24 @@ kotlin {
         browser { commonWebpackConfig { outputFileName = "devcontrols.js" } }
         binaries.executable()
     }
+    js(IR) {
+        browser { commonWebpackConfig { outputFileName = "devcontrols.js" } }
+        binaries.executable()
+    }
     applyDefaultHierarchyTemplate()
 
     sourceSets {
+        // webMain (js + wasmJs) comes from the default hierarchy template; the web entry point,
+        // YouTube-IFrame MediaController and capability stubs live there (written once).
+        val webMain by getting
+        webMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(libs.kotlinx.browser)
+        }
+
         val desktopMain by getting
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
