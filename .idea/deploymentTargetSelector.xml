@@ -8,7 +8,7 @@
       </SelectionState>
       <SelectionState runConfigName="composeApp">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-06-09T15:15:43.132842422Z">
+        <DropdownSelection timestamp="2026-06-10T14:23:53.396989700Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/home/mad_flasher/.config/.android/avd/Pixel_9_Pro_Fold.avd" />

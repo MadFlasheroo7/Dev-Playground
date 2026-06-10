@@ -1,13 +1,10 @@
 package pro.jayeshseth.media
 
 import android.content.Context
+import android.net.Uri
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import okhttp3.ConnectionPool
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,23 +14,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import androidx.media3.common.MediaItem as Media3Item
 
 /**
- * [MediaController] backed by Media3 / ExoPlayer. Plays the resolved progressive audio/video URL via a
- * [YoutubeRangeDataSource] so YouTube's bounded-range requirement is satisfied (a plain ExoPlayer would
- * get HTTP 403 on its open-ended range requests).
+ * [MediaController] backed by Media3 / ExoPlayer. YouTube `googlevideo` URLs can't be streamed directly
+ * (open-ended ranges → 403; range bursts get rate-limited), so a googlevideo URL is first **downloaded
+ * to a temp file** via [ChunkedDownloader] and ExoPlayer plays that local file — playback can't stall.
  */
 @UnstableApi
 class AndroidMediaController(context: Context) : MediaController {
-    // Zero-size pool → a fresh TCP connection per range request (resets YouTube's per-connection throttle).
-    private val httpClient = OkHttpClient.Builder()
-        .connectionPool(ConnectionPool(0, 1, TimeUnit.MILLISECONDS))
-        .build()
-    private val player = ExoPlayer.Builder(context.applicationContext)
-        .setMediaSourceFactory(DefaultMediaSourceFactory(YoutubeRangeDataSource.Factory(httpClient)))
-        .build()
+    private val appContext = context.applicationContext
+    private val player = ExoPlayer.Builder(appContext).build()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    @Volatile private var tempFile: File? = null
 
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
@@ -50,7 +45,7 @@ class AndroidMediaController(context: Context) : MediaController {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { _playing.value = isPlaying }
             override fun onPlaybackStateChanged(state: Int) {
-                _buffering.value = state == Player.STATE_BUFFERING
+                if (state != Player.STATE_BUFFERING) _buffering.value = false
             }
             override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
                 _error.value = e.errorCodeName + ": " + (e.message ?: "playback error")
@@ -68,13 +63,28 @@ class AndroidMediaController(context: Context) : MediaController {
 
     override fun play(url: String) {
         _error.value = null; _buffering.value = true
-        player.setMediaItem(Media3Item.fromUri(url)); player.prepare(); player.playWhenReady = true
+        _positionMs.value = 0; _durationMs.value = 0
+        scope.launch {
+            val uri = try {
+                if (url.contains("googlevideo.com")) {
+                    val f = File.createTempFile("dc-exo-", ".media", appContext.cacheDir)
+                    tempFile?.delete(); tempFile = f
+                    withContext(Dispatchers.IO) { ChunkedDownloader.download(url, f) }
+                    Uri.fromFile(f)
+                } else Uri.parse(url)
+            } catch (e: Exception) {
+                _error.value = "Download failed: ${e.message}"; _buffering.value = false
+                return@launch
+            }
+            player.setMediaItem(Media3Item.fromUri(uri)); player.prepare(); player.playWhenReady = true
+        }
     }
+
     override fun pause() { player.playWhenReady = false }
     override fun resume() { player.playWhenReady = true }
     override fun stop() { player.stop() }
     override fun seekTo(ms: Long) { player.seekTo(ms) }
-    override fun release() { scope.cancel(); player.release() }
+    override fun release() { scope.cancel(); runCatching { tempFile?.delete() }; player.release() }
 
     /** The underlying ExoPlayer, for an optional video surface (PlayerView) in the UI layer. */
     fun exoPlayer(): ExoPlayer = player

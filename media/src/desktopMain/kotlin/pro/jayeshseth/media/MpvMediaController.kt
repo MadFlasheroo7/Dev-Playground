@@ -6,6 +6,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -15,6 +16,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.putJsonArray
+import java.io.File
 import java.net.StandardProtocolFamily
 import java.net.UnixDomainSocketAddress
 import java.nio.ByteBuffer
@@ -28,9 +30,10 @@ import kotlin.concurrent.thread
  * Desktop [MediaController] backed by **mpv** (the `mpv` binary, driven over its JSON IPC socket).
  *
  * Chosen over VLCJ because VLCJ needs native libVLC installed, whereas mpv is a single ubiquitous
- * binary that plays YouTube's `audio/webm` (opus) natively and runs headless (`--no-video`). Like the
- * Android player it can't talk to googlevideo directly (open-ended ranges → 403), so googlevideo URLs
- * are routed through [YoutubeStreamProxy] first.
+ * binary that plays YouTube's `audio/webm` (opus) natively and runs headless (`--no-video`). Since
+ * googlevideo can't be streamed directly (open-ended ranges → 403, range bursts get rate-limited), a
+ * googlevideo URL is first **downloaded to a temp file** via [ChunkedDownloader], then mpv plays that
+ * local file — playback then can't stall mid-track.
  *
  * Control flows over a Unix-domain socket: we launch `mpv --idle --input-ipc-server=<sock>`, then send
  * newline-delimited JSON commands and `observe_property` for `time-pos`/`duration`/`pause`, which mpv
@@ -39,8 +42,8 @@ import kotlin.concurrent.thread
 internal class MpvMediaController : MediaController {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val proxy = YoutubeStreamProxy()
     private val json = Json { ignoreUnknownKeys = true }
+    @Volatile private var tempFile: File? = null
 
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
@@ -137,11 +140,23 @@ internal class MpvMediaController : MediaController {
 
     override fun play(url: String) {
         _error.value = null
-        _buffering.value = true // loading until the first bytes decode
+        _buffering.value = true // downloading/loading until the first bytes decode
         _positionMs.value = 0; _durationMs.value = 0
-        val playUrl = if (url.contains("googlevideo.com")) runCatching { proxy.start(url) }.getOrDefault(url) else url
-        send(buildJsonObject { putJsonArray("command") { add("loadfile"); add(playUrl); add("replace") } }.toString())
-        send(setPause(false))
+        scope.launch {
+            val playPath = try {
+                if (url.contains("googlevideo.com")) {
+                    val f = File.createTempFile("dc-mpv-", ".media")
+                    tempFile?.delete(); tempFile = f
+                    ChunkedDownloader.download(url, f)
+                    f.absolutePath
+                } else url
+            } catch (e: Exception) {
+                _error.value = "Download failed: ${e.message}"; _buffering.value = false
+                return@launch
+            }
+            send(buildJsonObject { putJsonArray("command") { add("loadfile"); add(playPath); add("replace") } }.toString())
+            send(setPause(false))
+        }
     }
 
     override fun pause() = send(setPause(true))
@@ -154,7 +169,7 @@ internal class MpvMediaController : MediaController {
         scope.cancel()
         runCatching { channel?.close() }
         runCatching { process?.destroy() }
-        proxy.stop()
+        runCatching { tempFile?.delete() }
         runCatching { Files.deleteIfExists(socketPath) }
     }
 

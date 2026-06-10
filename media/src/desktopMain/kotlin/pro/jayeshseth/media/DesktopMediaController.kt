@@ -35,8 +35,7 @@ class DesktopMediaController : MediaController {
 
     private val component: AudioPlayerComponent? = runCatching { AudioPlayerComponent() }.getOrNull()
 
-    /** Bridges YouTube's bounded-range requirement to VLC (which sends open-ended ranges → 403). */
-    private val proxy = YoutubeStreamProxy()
+    @Volatile private var tempFile: java.io.File? = null
 
     init {
         available = component != null
@@ -62,13 +61,24 @@ class DesktopMediaController : MediaController {
 
     override fun play(url: String) {
         _error.value = null; _wantPlaying = true; _buffering.value = true
-        // Route googlevideo URLs through the local range-proxy; play anything else (HLS/DASH) directly.
-        val playUrl = if (url.contains("googlevideo.com")) runCatching { proxy.start(url) }.getOrDefault(url) else url
-        component?.mediaPlayer()?.media()?.play(playUrl)
+        scope.launch {
+            val playPath = try {
+                if (url.contains("googlevideo.com")) {
+                    val f = java.io.File.createTempFile("dc-vlc-", ".media")
+                    tempFile?.delete(); tempFile = f
+                    ChunkedDownloader.download(url, f)
+                    f.absolutePath
+                } else url
+            } catch (e: Exception) {
+                _error.value = "Download failed: ${e.message}"; _buffering.value = false; _wantPlaying = false
+                return@launch
+            }
+            component?.mediaPlayer()?.media()?.play(playPath)
+        }
     }
     override fun pause() { component?.mediaPlayer()?.controls()?.setPause(true) }
     override fun resume() { component?.mediaPlayer()?.controls()?.setPause(false) }
     override fun stop() { component?.mediaPlayer()?.controls()?.stop() }
     override fun seekTo(ms: Long) { component?.mediaPlayer()?.controls()?.setTime(ms) }
-    override fun release() { scope.cancel(); proxy.stop(); component?.release() }
+    override fun release() { scope.cancel(); runCatching { tempFile?.delete() }; component?.release() }
 }
