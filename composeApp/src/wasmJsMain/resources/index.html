@@ -7,10 +7,41 @@
     <style>
         html, body { margin: 0; padding: 0; height: 100%; background: #101225; }
         canvas { display: block; }
+        #yt-player { position: fixed; left: -9999px; width: 1px; height: 1px; }
     </style>
 </head>
 <body>
 <canvas id="ComposeTarget"></canvas>
+<div id="yt-player"></div>
+
+<!-- YouTube IFrame Player API + a tiny control surface (window.__yt) used by the web MediaController. -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  (function () {
+    var player = null, ready = false, pendingId = null;
+    window.onYouTubeIframeAPIReady = function () {
+      player = new YT.Player('yt-player', {
+        height: '1', width: '1',
+        playerVars: { 'playsinline': 1 },
+        events: {
+          'onReady': function () {
+            ready = true;
+            if (pendingId) { player.loadVideoById(pendingId); pendingId = null; }
+          }
+        }
+      });
+    };
+    window.__yt = {
+      load: function (id) { if (ready && player) player.loadVideoById(id); else pendingId = id; },
+      play: function () { if (player && player.playVideo) player.playVideo(); },
+      pause: function () { if (player && player.pauseVideo) player.pauseVideo(); },
+      seek: function (s) { if (player && player.seekTo) player.seekTo(s, true); },
+      timeMs: function () { return (player && player.getCurrentTime) ? player.getCurrentTime() * 1000 : 0; },
+      durationMs: function () { return (player && player.getDuration) ? player.getDuration() * 1000 : 0; },
+      state: function () { return (player && player.getPlayerState) ? player.getPlayerState() : -1; }
+    };
+  })();
+</script>
 <script src="devcontrols.js"></script>
 </body>
 </html>

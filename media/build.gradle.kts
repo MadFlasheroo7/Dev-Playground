@@ -33,11 +33,15 @@ kotlin {
         val jvmShared by creating { dependsOn(commonMain) }
         val androidMain by getting { dependsOn(jvmShared) }
         val desktopMain by getting { dependsOn(jvmShared) }
+        val wasmJsMain by getting
 
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.ktor.client.core)
+        }
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js) // browser fetch engine — search via the Piped REST API
         }
         jvmShared.dependencies {
             implementation(libs.newpipeextractor)
