@@ -24,6 +24,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DevControls"
-// include(":composeApp") // TEMP (spike): isolated while validating :media on kmp-library + no bypass
+include(":androidApp")   // thin com.android.application shell (manifest + applicationId)
+include(":composeApp")   // shared Compose Multiplatform LIBRARY (android+desktop+wasm)
 include(":media")
  
