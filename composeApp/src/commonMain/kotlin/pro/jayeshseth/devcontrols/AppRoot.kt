@@ -19,7 +19,7 @@ import pro.jayeshseth.devcontrols.ui.theme.DevControlsTheme
  * navigating into a screen and back (the home leaves/re-enters composition).
  */
 @Composable
-fun AppRoot(initialRoute: Route = Route.MAIN) {
+fun AppRoot(initialRoute: Route = Route.MEDIA_STREAM) { // TEMP: land on Media for streaming dev; revert to Route.MAIN
     DevControlsTheme {
         var route by remember { mutableStateOf(initialRoute) }
         val homeScroll = rememberScrollState()
