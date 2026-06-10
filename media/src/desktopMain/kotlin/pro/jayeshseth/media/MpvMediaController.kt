@@ -44,6 +44,10 @@ internal class MpvMediaController : MediaController {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true }
     @Volatile private var tempFile: File? = null
+    /** Commands issued before the IPC socket connects; flushed on connect so an early tap isn't lost. */
+    private val pending = mutableListOf<String>()
+
+    override val canPlaySourceUrls = true
 
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
@@ -80,12 +84,13 @@ internal class MpvMediaController : MediaController {
         if (proc != null) thread(isDaemon = true, name = "mpv-ipc") {
             val ch = connectWithRetry()
             if (ch == null) { _error.value = "Could not connect to mpv IPC socket"; return@thread }
-            channel = ch
-            send(observe(1, "time-pos"))
-            send(observe(2, "duration"))
-            send(observe(3, "pause"))
-            send(observe(4, "paused-for-cache")) // true while buffering / waiting for the stream
-            send(observe(5, "core-idle"))         // true when not actively decoding (loading or stalled)
+            // Publish the channel and flush anything queued before connect (e.g. a quick tap).
+            synchronized(pending) { channel = ch; pending.forEach { writeLine(ch, it) }; pending.clear() }
+            writeLine(ch, observe(1, "time-pos"))
+            writeLine(ch, observe(2, "duration"))
+            writeLine(ch, observe(3, "pause"))
+            writeLine(ch, observe(4, "paused-for-cache")) // true while buffering / waiting for the stream
+            writeLine(ch, observe(5, "core-idle"))         // true when not actively decoding (loading/stalled)
             readLoop(ch)
         }
     }
@@ -138,6 +143,14 @@ internal class MpvMediaController : MediaController {
         }
     }
 
+    /** Hand mpv a YouTube watch URL directly — its yt-dlp hook resolves an uncapped stream and plays it. */
+    override fun playSource(youtubeUrl: String) {
+        _error.value = null; _buffering.value = true
+        _positionMs.value = 0; _durationMs.value = 0
+        send(buildJsonObject { putJsonArray("command") { add("loadfile"); add(youtubeUrl); add("replace") } }.toString())
+        send(setPause(false))
+    }
+
     override fun play(url: String) {
         _error.value = null
         _buffering.value = true // downloading/loading until the first bytes decode
@@ -175,10 +188,15 @@ internal class MpvMediaController : MediaController {
 
     // ---- IPC helpers ----
     private fun send(command: String) {
-        val ch = channel ?: return
-        runCatching {
-            synchronized(ch) { ch.write(ByteBuffer.wrap((command + "\n").toByteArray(StandardCharsets.UTF_8))) }
+        synchronized(pending) {
+            val ch = channel
+            if (ch == null) { pending.add(command); return } // not connected yet — queue, flushed on connect
+            writeLine(ch, command)
         }
+    }
+
+    private fun writeLine(ch: SocketChannel, command: String) {
+        runCatching { ch.write(ByteBuffer.wrap((command + "\n").toByteArray(StandardCharsets.UTF_8))) }
     }
 
     private fun observe(id: Int, property: String): String =

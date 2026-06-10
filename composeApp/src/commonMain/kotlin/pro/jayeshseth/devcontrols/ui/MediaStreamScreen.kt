@@ -82,9 +82,14 @@ fun MediaStreamScreen(onBack: () -> Unit) {
         scope.launch {
             error = null; nowPlaying = item; resolving = true
             runCatching {
-                val url = source.resolve(item.id).bestPlayable()
-                    ?: throw IllegalStateException("No playable stream (YouTube may have blocked extraction)")
-                controller.play(url)
+                if (controller.canPlaySourceUrls) {
+                    // Desktop (mpv+yt-dlp): hand over the watch URL; it resolves an uncapped stream itself.
+                    controller.playSource(item.id)
+                } else {
+                    val url = source.resolve(item.id).bestPlayable()
+                        ?: throw IllegalStateException("No playable stream (YouTube may have blocked extraction)")
+                    controller.play(url)
+                }
             }.onFailure { error = "Playback failed: ${it.message}" }
             resolving = false
         }

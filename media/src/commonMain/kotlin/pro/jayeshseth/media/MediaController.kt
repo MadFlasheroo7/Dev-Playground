@@ -20,7 +20,18 @@ interface MediaController {
     /** Last fatal playback error message, or null. Lets the UI distinguish "still loading" from "broken". */
     val error: StateFlow<String?>
 
-    /** Load [url] and start playback. */
+    /**
+     * True if this controller can play a YouTube **watch URL** directly — resolving the stream itself
+     * (e.g. mpv via its yt-dlp hook). When true, the UI calls [playSource] with the watch URL and skips
+     * its own [MediaSource.resolve], which matters because NewPipeExtractor's stream URLs are currently
+     * PoToken-capped whereas yt-dlp's are not.
+     */
+    val canPlaySourceUrls: Boolean get() = false
+
+    /** Play a YouTube watch/source URL directly. Only meaningful when [canPlaySourceUrls] is true. */
+    fun playSource(youtubeUrl: String) = play(youtubeUrl)
+
+    /** Load [url] (a direct, already-resolved stream URL) and start playback. */
     fun play(url: String)
     fun pause()
     fun resume()
