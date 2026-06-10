@@ -57,6 +57,10 @@ internal class MpvMediaController : MediaController {
         process = ProcessBuilder(
             "mpv", "--idle=yes", "--no-video", "--no-terminal", "--really-quiet",
             "--no-config", "--input-ipc-server=$socketPath",
+            // Bound read-ahead so mpv pulls data at roughly playback pace instead of slurping the whole
+            // song in one burst — a burst of rapid range requests trips YouTube's rate limiter and a
+            // chunk 403s mid-stream, cutting playback off after ~a minute.
+            "--cache=yes", "--demuxer-readahead-secs=30", "--demuxer-max-bytes=8MiB", "--demuxer-max-back-bytes=4MiB",
         ).redirectErrorStream(true).start()
 
         // Connect once mpv has created the socket (it does so asynchronously after launch).

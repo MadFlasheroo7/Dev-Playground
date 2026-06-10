@@ -2,10 +2,12 @@ package pro.jayeshseth.media
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * # Why this exists (desktop)
@@ -17,14 +19,21 @@ import java.util.concurrent.Executors
  * the real stream in bounded `&range=START-END` chunks (which YouTube serves with HTTP 200/206) and
  * streams the bytes back as a normal, seekable resource. Built on the JDK's `com.sun.net.httpserver`,
  * so no extra dependencies.
+ *
+ * Crucially each upstream chunk is fetched on a **fresh TCP connection** (`Connection: close` + a
+ * zero-size connection pool) — YouTube throttles/403s subsequent ranges on a *reused* connection, so a
+ * new connection per chunk resets that per-connection throttle. (Recipe from AbleMusicPlayer.)
  */
-internal class YoutubeStreamProxy(private val client: OkHttpClient = OkHttpClient()) {
+internal class YoutubeStreamProxy(
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .connectionPool(ConnectionPool(0, 1, TimeUnit.MILLISECONDS))
+        .build(),
+) {
 
     private var server: HttpServer? = null
     private var targetUrl: String = ""
     private var totalBytes: Long = -1
     private var contentType: String = "application/octet-stream"
-    @Volatile private var requestNumber: Long = 0
 
     /** Starts (or restarts) the proxy for [youtubeUrl] and returns the localhost URL VLC should play. */
     fun start(youtubeUrl: String): String {
@@ -34,7 +43,8 @@ internal class YoutubeStreamProxy(private val client: OkHttpClient = OkHttpClien
         // Probe once with a *bounded* range header (which YouTube accepts) to learn the total size and
         // content type up front, so we can answer VLC's range requests with correct Content-Range/Length.
         client.newCall(
-            Request.Builder().url(targetUrl).header("Range", "bytes=0-1").header("User-Agent", USER_AGENT).get().build()
+            Request.Builder().url(targetUrl).header("Range", "bytes=0-1")
+                .header("User-Agent", USER_AGENT).header("Connection", "close").get().build()
         ).execute().use { probe ->
             totalBytes = parseTotal(probe.header("Content-Range")) ?: clenOf(youtubeUrl) ?: -1
             probe.header("Content-Type")?.let { contentType = it }
@@ -70,26 +80,39 @@ internal class YoutubeStreamProxy(private val client: OkHttpClient = OkHttpClien
             var pos = start
             while (pos <= end) {
                 val chunkEnd = minOf(pos + CHUNK - 1, end)
-                val ok = client.newCall(
-                    Request.Builder().url(rangedUrl(pos, chunkEnd)).header("User-Agent", USER_AGENT).get().build()
-                ).execute()
-                ok.use { resp ->
-                    if (!resp.isSuccessful) return            // client/VLC will retry; abort this response
-                    resp.body?.byteStream()?.copyTo(out)
-                }
+                val body = fetchChunkWithRetry(pos, chunkEnd) ?: return // gave up after retries → truncate
+                body.use { it.byteStream().copyTo(out) }
                 pos = chunkEnd + 1
             }
         }
     }
 
-    private fun rangedUrl(start: Long, end: Long): String =
-        targetUrl + (if (targetUrl.contains('?')) '&' else '?') + "range=$start-$end&rn=${requestNumber++}"
+    /** Fetches one range (bounded `Range` header, fresh connection), retrying transient failures. */
+    private fun fetchChunkWithRetry(start: Long, end: Long): okhttp3.ResponseBody? {
+        var attempt = 0
+        while (attempt < MAX_RETRIES) {
+            val resp = runCatching {
+                client.newCall(
+                    Request.Builder().url(targetUrl)
+                        .header("User-Agent", USER_AGENT)
+                        .header("Range", "bytes=$start-$end")
+                        .header("Connection", "close") // fresh TCP connection per chunk
+                        .get().build()
+                ).execute()
+            }.getOrNull()
+            if (resp != null && resp.isSuccessful) return resp.body
+            resp?.close()
+            attempt++
+            runCatching { Thread.sleep(400L * attempt) }
+        }
+        return null
+    }
 
     companion object {
-        private const val CHUNK = 512L shl 10 // 512 KiB — YouTube 403s larger per-request ranges
+        private const val CHUNK = 256L shl 10 // 256 KiB — matches AbleMusicPlayer; YouTube 403s larger
+        private const val MAX_RETRIES = 4
         private const val USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0"
 
         private val CLEN = Regex("""[?&]clen=(\d+)""")
         private val CONTENT_RANGE_TOTAL = Regex("""/(\d+)\s*$""")

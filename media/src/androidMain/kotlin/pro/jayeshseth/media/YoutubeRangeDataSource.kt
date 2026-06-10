@@ -46,8 +46,6 @@ internal class YoutubeRangeDataSource(
     private var currentBody: okhttp3.ResponseBody? = null
     /** true once [transferStarted] has fired, so [close] only balances it then (avoids a bandwidth-meter NPE). */
     private var opened = false
-    /** incrementing per-request number YouTube expects on sequential chunk fetches */
-    private var requestNumber = 0L
 
     /** Non-null when the URL isn't a googlevideo stream and we just proxy a normal HTTP data source. */
     private var delegate: DefaultHttpDataSource? = null
@@ -102,17 +100,25 @@ internal class YoutubeRangeDataSource(
 
         val rawEnd = position + CHUNK - 1
         val end = if (bytesRemaining != C.LENGTH_UNSET.toLong()) minOf(rawEnd, position + bytesRemaining - 1) else rawEnd
-        val url = baseUrl + (if (baseUrl.contains('?')) '&' else '?') + "range=$position-$end&rn=${requestNumber++}"
 
-        val response = client.newCall(
-            Request.Builder().url(url).header("User-Agent", USER_AGENT).get().build()
-        ).execute()
-
-        if (response.code == 416) { response.close(); return false } // requested past end → done
-        if (!response.isSuccessful) {
+        // Bounded Range header on a fresh TCP connection (Connection: close) — YouTube throttles/403s
+        // subsequent ranges on a reused connection. Retry transient failures with backoff.
+        var attempt = 0
+        var response: okhttp3.Response
+        while (true) {
+            response = client.newCall(
+                Request.Builder().url(baseUrl)
+                    .header("User-Agent", USER_AGENT)
+                    .header("Range", "bytes=$position-$end")
+                    .header("Connection", "close")
+                    .get().build()
+            ).execute()
+            if (response.code == 416) { response.close(); return false } // requested past end → done
+            if (response.isSuccessful) break
             val code = response.code
             response.close()
-            throw IOException("YouTube range request failed: HTTP $code for $position-$end")
+            if (++attempt >= MAX_RETRIES) throw IOException("YouTube range request failed: HTTP $code for $position-$end")
+            runCatching { Thread.sleep(400L * attempt) }
         }
         val body = response.body ?: run { response.close(); throw IOException("empty body") }
         currentBody = body
@@ -139,12 +145,11 @@ internal class YoutubeRangeDataSource(
     override fun getUri(): Uri? = delegate?.uri ?: spec?.uri
 
     companion object {
-        // YouTube rejects per-request ranges larger than ~512 KiB on these URLs (1 MiB → HTTP 403),
-        // so keep each chunk at 512 KiB.
-        private const val CHUNK = 512L shl 10
+        // 256 KiB chunks, matching AbleMusicPlayer — YouTube 403s larger per-request ranges.
+        private const val CHUNK = 256L shl 10
+        private const val MAX_RETRIES = 4
         private const val USER_AGENT =
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0"
 
         private val CLEN = Regex("""[?&]clen=(\d+)""")
         private fun clenOf(url: String): Long? = CLEN.find(url)?.groupValues?.get(1)?.toLongOrNull()

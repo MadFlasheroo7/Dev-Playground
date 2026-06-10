@@ -5,7 +5,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +26,10 @@ import androidx.media3.common.MediaItem as Media3Item
  */
 @UnstableApi
 class AndroidMediaController(context: Context) : MediaController {
-    private val httpClient = OkHttpClient()
+    // Zero-size pool → a fresh TCP connection per range request (resets YouTube's per-connection throttle).
+    private val httpClient = OkHttpClient.Builder()
+        .connectionPool(ConnectionPool(0, 1, TimeUnit.MILLISECONDS))
+        .build()
     private val player = ExoPlayer.Builder(context.applicationContext)
         .setMediaSourceFactory(DefaultMediaSourceFactory(YoutubeRangeDataSource.Factory(httpClient)))
         .build()
