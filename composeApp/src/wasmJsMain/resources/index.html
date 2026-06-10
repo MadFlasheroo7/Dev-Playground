@@ -7,41 +7,63 @@
     <style>
         html, body { margin: 0; padding: 0; height: 100%; background: #101225; }
         canvas { display: block; }
-        #yt-player { position: fixed; left: -9999px; width: 1px; height: 1px; }
+        /* Real-sized but parked off-screen — YouTube refuses to play in a 1x1 / display:none iframe. */
+        #yt-host { position: fixed; bottom: 0; left: 0; width: 320px; height: 180px; opacity: 0.01; pointer-events: none; z-index: -1; }
     </style>
 </head>
 <body>
 <canvas id="ComposeTarget"></canvas>
-<div id="yt-player"></div>
 
-<!-- YouTube IFrame Player API + a tiny control surface (window.__yt) used by the web MediaController. -->
-<script src="https://www.youtube.com/iframe_api"></script>
+<!-- YouTube IFrame Player API + a tiny control surface (window.__yt) used by the web MediaController.
+     The host div is attached to <html> so Compose taking over <body> can't remove it. -->
 <script>
   (function () {
     var player = null, ready = false, pendingId = null;
+    window.__ytLog = [];
+    function log(m) { window.__ytLog.push(m); console.log("[yt] " + m); }
+
+    // host div on <html> so it survives Compose's <body> rendering
+    var host = document.createElement('div');
+    host.id = 'yt-host';
+    var inner = document.createElement('div');
+    inner.id = 'yt-player';
+    host.appendChild(inner);
+    document.documentElement.appendChild(host);
+
     window.onYouTubeIframeAPIReady = function () {
+      log("IFrame API ready, creating player");
       player = new YT.Player('yt-player', {
-        height: '1', width: '1',
+        height: '180', width: '320',
         playerVars: { 'playsinline': 1 },
         events: {
           'onReady': function () {
-            ready = true;
+            ready = true; log("player ready");
             if (pendingId) { player.loadVideoById(pendingId); pendingId = null; }
-          }
+          },
+          'onError': function (e) { log("player error " + e.data); },
+          'onStateChange': function (e) { log("state " + e.data); }
         }
       });
     };
+
     window.__yt = {
-      load: function (id) { if (ready && player) player.loadVideoById(id); else pendingId = id; },
+      load: function (id) {
+        log("load " + id);
+        if (ready && player) { player.loadVideoById(id); player.playVideo(); }
+        else pendingId = id;
+      },
       play: function () { if (player && player.playVideo) player.playVideo(); },
       pause: function () { if (player && player.pauseVideo) player.pauseVideo(); },
       seek: function (s) { if (player && player.seekTo) player.seekTo(s, true); },
       timeMs: function () { return (player && player.getCurrentTime) ? player.getCurrentTime() * 1000 : 0; },
       durationMs: function () { return (player && player.getDuration) ? player.getDuration() * 1000 : 0; },
-      state: function () { return (player && player.getPlayerState) ? player.getPlayerState() : -1; }
+      state: function () { return (player && player.getPlayerState) ? player.getPlayerState() : -1; },
+      ready: function () { return ready; }
     };
+    log("bridge installed");
   })();
 </script>
+<script src="https://www.youtube.com/iframe_api"></script>
 <script src="devcontrols.js"></script>
 </body>
 </html>
