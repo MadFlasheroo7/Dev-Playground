@@ -41,6 +41,9 @@ class AndroidMediaController(context: Context) : MediaController {
     override val buffering: StateFlow<Boolean> = _buffering
     override val error: StateFlow<String?> = _error
 
+    // We resolve watch URLs ourselves via yt-dlp (uncapped), like mpv on desktop.
+    override val canPlaySourceUrls = true
+
     init {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { _playing.value = isPlaying }
@@ -58,6 +61,21 @@ class AndroidMediaController(context: Context) : MediaController {
                 _durationMs.value = player.duration.takeIf { it > 0 } ?: 0
                 delay(400)
             }
+        }
+    }
+
+    /** Resolve a YouTube watch URL to an uncapped stream via yt-dlp, then stream it with ExoPlayer. */
+    override fun playSource(youtubeUrl: String) {
+        _error.value = null; _buffering.value = true
+        _positionMs.value = 0; _durationMs.value = 0
+        scope.launch {
+            val streamUrl = try {
+                withContext(Dispatchers.IO) { YtDlp.resolveStreamUrl(appContext, youtubeUrl) }
+            } catch (e: Exception) {
+                _error.value = "Resolve failed: ${e.message}"; _buffering.value = false
+                return@launch
+            }
+            player.setMediaItem(Media3Item.fromUri(streamUrl)); player.prepare(); player.playWhenReady = true
         }
     }
 

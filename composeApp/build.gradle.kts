@@ -86,6 +86,14 @@ android {
     sourceSets["main"].res.srcDirs("src/androidMain/res")
     sourceSets["main"].assets.srcDirs("src/androidMain/assets")
 
+    // youtubedl-android reads its bundled Python from nativeLibraryDir at runtime, so the native libs
+    // must be extracted to disk on install (modern AGP defaults to not extracting them).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

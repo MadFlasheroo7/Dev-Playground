@@ -37,6 +37,8 @@ kotlin {
             // so ExoPlayer can also play the adaptive HLS/DASH manifests when bestPlayable() falls back to them
             implementation(libs.androidx.media3.exoplayer.hls)
             implementation(libs.androidx.media3.exoplayer.dash)
+            // yt-dlp on Android (bundles Python) — resolves uncapped YouTube stream URLs (NewPipe's are PoToken-capped)
+            implementation(libs.youtubedl.android)
         }
         desktopMain.dependencies {
             implementation(libs.vlcj)
