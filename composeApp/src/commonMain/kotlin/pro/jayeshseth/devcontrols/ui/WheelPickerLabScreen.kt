@@ -60,7 +60,7 @@ fun WheelPickerLabScreen(onBack: () -> Unit) {
                 Wheel(count = 60, onSelected = { minute = it }, modifier = Modifier.width(90.dp))
             }
             Spacer(Modifier.height(24.dp))
-            Text("Selected: %02d:%02d".format(hour, minute), style = MaterialTheme.typography.headlineSmall)
+            Text("Selected: ${hour.pad(2)}:${minute.pad(2)}", style = MaterialTheme.typography.headlineSmall)
         }
     }
 }

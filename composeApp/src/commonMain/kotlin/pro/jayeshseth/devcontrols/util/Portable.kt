@@ -61,3 +61,46 @@ fun hexUpper(value: Int, width: Int): String =
 
 /** Lowercase hex string of a byte array. */
 fun ByteArray.toHex(): String = joinToString("") { hex2(it.toInt()) }
+
+/** Minimal binary min-heap of (value, priority) — replaces java.util.PriorityQueue for A-star / Dijkstra. */
+class IntMinHeap {
+    private val pr = ArrayList<Int>()
+    private val vl = ArrayList<Int>()
+    fun isNotEmpty(): Boolean = vl.isNotEmpty()
+    fun add(value: Int, priority: Int) {
+        pr.add(priority); vl.add(value)
+        var i = vl.size - 1
+        while (i > 0) { val p = (i - 1) / 2; if (pr[p] <= pr[i]) break; swap(i, p); i = p }
+    }
+    fun poll(): Int {
+        val top = vl[0]
+        val lv = vl.removeAt(vl.size - 1); val lp = pr.removeAt(pr.size - 1)
+        if (vl.isNotEmpty()) {
+            vl[0] = lv; pr[0] = lp; var i = 0
+            while (true) {
+                val l = 2 * i + 1; val r = 2 * i + 2; var m = i
+                if (l < vl.size && pr[l] < pr[m]) m = l
+                if (r < vl.size && pr[r] < pr[m]) m = r
+                if (m == i) break; swap(i, m); i = m
+            }
+        }
+        return top
+    }
+    private fun swap(a: Int, b: Int) {
+        val tp = pr[a]; pr[a] = pr[b]; pr[b] = tp
+        val tv = vl[a]; vl[a] = vl[b]; vl[b] = tv
+    }
+}
+
+private val CRC32_TABLE = IntArray(256) { i ->
+    var c = i
+    repeat(8) { c = if (c and 1 != 0) 0xEDB88320.toInt() xor (c ushr 1) else c ushr 1 }
+    c
+}
+
+/** Pure-Kotlin CRC-32 (replaces java.util.zip.CRC32), returned as a lowercase hex string. */
+fun crc32Hex(bytes: ByteArray): String {
+    var crc = 0xFFFFFFFF.toInt()
+    for (b in bytes) crc = CRC32_TABLE[(crc xor b.toInt()) and 0xFF] xor (crc ushr 8)
+    return ((crc.inv()).toLong() and 0xFFFFFFFFL).toString(16)
+}

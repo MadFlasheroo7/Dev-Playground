@@ -28,18 +28,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import java.security.MessageDigest
-import java.util.zip.CRC32
+import org.kotlincrypto.hash.md.MD5
+import org.kotlincrypto.hash.sha1.SHA1
+import org.kotlincrypto.hash.sha2.SHA256
+import org.kotlincrypto.hash.sha2.SHA512
+import pro.jayeshseth.devcontrols.util.crc32Hex
+import pro.jayeshseth.devcontrols.util.toHex
 
-/** Hashing — live MD5 / SHA-1 / SHA-256 / SHA-512 / CRC32 of any text. */
+/** Hashing — live MD5 / SHA-1 / SHA-256 / SHA-512 / CRC32 of any text (multiplatform via kotlincrypto). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HashingScreen(onBack: () -> Unit) {
     var input by remember { mutableStateOf("hello world") }
     fun digest(algo: String) = runCatching {
-        MessageDigest.getInstance(algo).digest(input.toByteArray()).joinToString("") { hex2(it) }
+        val d = when (algo) {
+            "MD5" -> MD5(); "SHA-1" -> SHA1(); "SHA-256" -> SHA256(); "SHA-512" -> SHA512()
+            else -> error("unknown")
+        }
+        d.digest(input.encodeToByteArray()).toHex()
     }.getOrDefault("—")
-    val crc = remember(input) { CRC32().apply { update(input.toByteArray()) }.value.toString(16) }
+    val crc = remember(input) { crc32Hex(input.encodeToByteArray()) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Hashing") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },

@@ -1,5 +1,7 @@
 package pro.jayeshseth.devcontrols.ui.maps
 
+import pro.jayeshseth.devcontrols.util.fmt
+
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,8 +57,8 @@ fun CoordinateToolsScreen(onBack: () -> Unit) {
                 val brg = GeoMath.bearing(a.first!!, a.second!!, b.first!!, b.second!!)
                 val mid = GeoMath.midpoint(a.first!!, a.second!!, b.first!!, b.second!!)
                 Result("Distance", GeoMath.fmtDist(dist))
-                Result("Initial bearing", "%.1f° (%s)".format(brg, compass(brg)))
-                Result("Midpoint", "%.5f, %.5f".format(mid.first, mid.second))
+                Result("Initial bearing", "${fmt(brg, 1)}° (${compass(brg)})")
+                Result("Midpoint", "${fmt(mid.first, 5)}, ${fmt(mid.second, 5)}")
                 Result("A in DMS", "${GeoMath.toDms(a.first!!, true)}  ${GeoMath.toDms(a.second!!, false)}")
                 Result("B in DMS", "${GeoMath.toDms(b.first!!, true)}  ${GeoMath.toDms(b.second!!, false)}")
             } else Text("Enter valid decimal coordinates.", color = MaterialTheme.colorScheme.error)

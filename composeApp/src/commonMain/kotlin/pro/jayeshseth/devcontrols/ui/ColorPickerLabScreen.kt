@@ -1,5 +1,7 @@
 package pro.jayeshseth.devcontrols.ui
 
+import pro.jayeshseth.devcontrols.util.hexUpper
+
 import pro.jayeshseth.devcontrols.util.fmt
 import pro.jayeshseth.devcontrols.util.hex2
 import pro.jayeshseth.devcontrols.util.pad
@@ -80,7 +82,7 @@ fun ColorPickerLabScreen(onBack: () -> Unit) {
             val dx = o.x - cx; val dy = o.y - cy
             val r = hypot(dx, dy)
             val radius = sizePx / 2f
-            hue = ((Math.toDegrees(atan2(dy, dx).toDouble()) + 360) % 360).toFloat()
+            hue = ((((atan2(dy, dx).toDouble()) * 180.0 / kotlin.math.PI) + 360) % 360).toFloat()
             sat = (r / radius).coerceIn(0f, 1f)
             marker = o
         }
@@ -120,7 +122,7 @@ fun ColorPickerLabScreen(onBack: () -> Unit) {
                 Box(Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)).background(selected))
                 Spacer(Modifier.size(16.dp))
                 Column {
-                    Text("#%06X".format(0xFFFFFF and selected.toArgb()), fontFamily = FontFamily.Monospace)
+                    Text("#${hexUpper(0xFFFFFF and selected.toArgb(), 6)}", fontFamily = FontFamily.Monospace)
                     Text("H ${hue.toInt()}  S ${fmt(sat, 2)}  V ${fmt(value, 2)}",
                         fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
                 }

@@ -40,7 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
-import java.util.Calendar
+import pro.jayeshseth.devcontrols.util.millisToLocal
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -50,8 +50,8 @@ import kotlin.math.sin
 fun ClockGalleryLabScreen(onBack: () -> Unit) {
     var now by remember { mutableLongStateOf(nowMillis()) }
     LaunchedEffect(Unit) { while (true) { withFrameNanos { now = nowMillis() } } }
-    val cal = remember(now / 1000) { Calendar.getInstance().apply { timeInMillis = now } }
-    val h = cal.get(Calendar.HOUR_OF_DAY); val mn = cal.get(Calendar.MINUTE); val s = cal.get(Calendar.SECOND)
+    val cal = remember(now / 1000) { millisToLocal(now) }
+    val h = cal.hour; val mn = cal.minute; val s = cal.second
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Clock Gallery") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },
@@ -64,7 +64,7 @@ fun ClockGalleryLabScreen(onBack: () -> Unit) {
                 val c = Offset(size.width / 2, size.height / 2); val r = size.minDimension / 2 * 0.9f
                 drawCircle(onSurf.copy(alpha = 0.2f), r, c, style = Stroke(3f))
                 fun hand(frac: Float, len: Float, w: Float, col: Color) {
-                    val a = frac * 2 * Math.PI.toFloat() - Math.PI.toFloat() / 2
+                    val a = frac * 2 * kotlin.math.PI.toFloat() - kotlin.math.PI.toFloat() / 2
                     drawLine(col, c, Offset(c.x + cos(a) * r * len, c.y + sin(a) * r * len), w, cap = StrokeCap.Round)
                 }
                 hand((h % 12 + mn / 60f) / 12f, 0.5f, 8f, onSurf)

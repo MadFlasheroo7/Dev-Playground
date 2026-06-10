@@ -30,16 +30,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.toLocalDateTime
 
 private val ZONES = listOf(
-    "Local" to TimeZone.getDefault().id, "New York" to "America/New_York", "London" to "Europe/London",
+    "Local" to TimeZone.currentSystemDefault().id, "New York" to "America/New_York", "London" to "Europe/London",
     "Mumbai" to "Asia/Kolkata", "Tokyo" to "Asia/Tokyo", "Sydney" to "Australia/Sydney",
     "Dubai" to "Asia/Dubai", "San Francisco" to "America/Los_Angeles", "Berlin" to "Europe/Berlin"
 )
+private val DOW = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+private val MON = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 /** World clock — live times across major time zones. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,9 +56,9 @@ fun WorldClockScreen(onBack: () -> Unit) {
     ) { inner ->
         LazyColumn(Modifier.padding(inner).fillMaxSize().padding(horizontal = 16.dp)) {
             items(ZONES) { (label, zone) ->
-                val tz = TimeZone.getTimeZone(zone)
-                val time = SimpleDateFormat("HH:mm:ss", Locale.US).apply { timeZone = tz }.format(Date(now))
-                val day = SimpleDateFormat("EEE d MMM", Locale.US).apply { timeZone = tz }.format(Date(now))
+                val ldt = Instant.fromEpochMilliseconds(now).toLocalDateTime(TimeZone.of(zone))
+                val time = "${ldt.hour.pad(2)}:${ldt.minute.pad(2)}:${ldt.second.pad(2)}"
+                val day = "${DOW[ldt.dayOfWeek.isoDayNumber - 1]} ${ldt.dayOfMonth} ${MON[ldt.monthNumber - 1]}"
                 androidx.compose.foundation.layout.Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(label, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)

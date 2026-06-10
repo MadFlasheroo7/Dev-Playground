@@ -83,7 +83,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLSystem(sentenc
     run {
         val st = State(0f, 0f, -90f); val stack = ArrayDeque<State>()
         for (c in sentence) when (c) {
-            'F', 'G' -> { val r = Math.toRadians(st.a.toDouble()); st.x += (cos(r) * step).toFloat(); st.y += (sin(r) * step).toFloat()
+            'F', 'G' -> { val r = ((st.a.toDouble()) * kotlin.math.PI / 180.0); st.x += (cos(r) * step).toFloat(); st.y += (sin(r) * step).toFloat()
                 minX = minOf(minX, st.x); maxX = maxOf(maxX, st.x); minY = minOf(minY, st.y); maxY = maxOf(maxY, st.y) }
             '+' -> st.a += angleDeg
             '-' -> st.a -= angleDeg
@@ -98,7 +98,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawLSystem(sentenc
     val st = State(0f, 0f, -90f); val stack = ArrayDeque<State>()
     for (c in sentence) when (c) {
         'F', 'G' -> {
-            val r = Math.toRadians(st.a.toDouble())
+            val r = ((st.a.toDouble()) * kotlin.math.PI / 180.0)
             val nx = st.x + (cos(r) * step).toFloat(); val ny = st.y + (sin(r) * step).toFloat()
             drawLine(Color(0xFF7CFF9E), Offset(st.x * scale + ox, st.y * scale + oy), Offset(nx * scale + ox, ny * scale + oy), strokeWidth = 2f)
             st.x = nx; st.y = ny

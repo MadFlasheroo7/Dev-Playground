@@ -78,7 +78,7 @@ fun ConfettiLabScreen(onBack: () -> Unit) {
 
         fun burst(at: Offset) {
             repeat(50) {
-                val ang = Random.nextDouble(0.0, 2 * Math.PI)
+                val ang = Random.nextDouble(0.0, 2 * kotlin.math.PI)
                 val speed = Random.nextDouble(6.0, 22.0).toFloat()
                 pieces.add(
                     Confetto(

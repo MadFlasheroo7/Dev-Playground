@@ -11,7 +11,7 @@ kotlin {
     // com.android.kotlin.multiplatform.library: the Android target is declared here (no top-level android{}).
     androidLibrary {
         namespace = "pro.jayeshseth.media"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 30
     }
     jvm("desktop") {

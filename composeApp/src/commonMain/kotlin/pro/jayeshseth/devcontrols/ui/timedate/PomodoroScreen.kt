@@ -1,5 +1,7 @@
 package pro.jayeshseth.devcontrols.ui.timedate
 
+import pro.jayeshseth.devcontrols.util.pad
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -72,7 +74,7 @@ fun PomodoroScreen(onBack: () -> Unit) {
                     drawArc(track, -90f, 360f, false, style = Stroke(st, cap = StrokeCap.Round), size = Size(size.width - st, size.height - st), topLeft = androidx.compose.ui.geometry.Offset(st / 2, st / 2))
                     drawArc(ringColor, -90f, 360f * remaining / total, false, style = Stroke(st, cap = StrokeCap.Round), size = Size(size.width - st, size.height - st), topLeft = androidx.compose.ui.geometry.Offset(st / 2, st / 2))
                 }
-                Text("%02d:%02d".format(remaining / 60, remaining % 60), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 44.sp)
+                Text("${(remaining / 60).pad(2)}:${(remaining % 60).pad(2)}", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 44.sp)
             }
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

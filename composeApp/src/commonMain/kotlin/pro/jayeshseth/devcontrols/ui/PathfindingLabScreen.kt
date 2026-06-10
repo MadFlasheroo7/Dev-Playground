@@ -30,7 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
-import java.util.PriorityQueue
+import pro.jayeshseth.devcontrols.util.IntMinHeap
 import kotlin.math.abs
 
 /** A* pathfinding visualizer — paint walls, run, watch the frontier expand and the path form. */
@@ -55,8 +55,8 @@ fun PathfindingLabScreen(onBack: () -> Unit) {
         val g = IntArray(cols * rows) { Int.MAX_VALUE }
         val came = IntArray(cols * rows) { -1 }
         fun hx(i: Int): Int { val x = i % cols; val y = i / cols; return abs(x - goal % cols) + abs(y - goal / cols) }
-        val open = PriorityQueue<Int>(compareBy { g[it] + hx(it) })
-        g[start] = 0; open.add(start)
+        val open = IntMinHeap()
+        g[start] = 0; open.add(start, hx(start))
         var found = false
         while (open.isNotEmpty()) {
             val cur = open.poll()
@@ -70,7 +70,7 @@ fun PathfindingLabScreen(onBack: () -> Unit) {
                     val ni = ny * cols + nx
                     if (wall[ni] || visited[ni]) continue
                     val ng = g[cur] + 1
-                    if (ng < g[ni]) { g[ni] = ng; came[ni] = cur; open.add(ni) }
+                    if (ng < g[ni]) { g[ni] = ng; came[ni] = cur; open.add(ni, ng + hx(ni)) }
                 }
             }
         }

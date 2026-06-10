@@ -34,7 +34,7 @@ import kotlin.math.sin
 @Composable
 fun DoublePendulumLabScreen(onBack: () -> Unit) {
     // a1, a2, a1v, a2v
-    val s = remember { floatArrayOf(Math.PI.toFloat() / 2f * 1.7f, Math.PI.toFloat() / 2f * 1.2f, 0f, 0f) }
+    val s = remember { floatArrayOf(kotlin.math.PI.toFloat() / 2f * 1.7f, kotlin.math.PI.toFloat() / 2f * 1.2f, 0f, 0f) }
     val trail = remember { ArrayDeque<Offset>() }
     var tick by remember { mutableIntStateOf(0) }
     var resetN by remember { mutableIntStateOf(0) }

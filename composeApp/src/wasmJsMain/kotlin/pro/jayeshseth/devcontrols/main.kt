@@ -1,12 +1,13 @@
 package pro.jayeshseth.devcontrols
 
 import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.window.CanvasBasedWindow
+import androidx.compose.ui.window.ComposeViewport
+import kotlinx.browser.document
 
-/** Web (Wasm) entry point — renders into the <canvas id="ComposeTarget"> in index.html. */
+/** Web (Wasm) entry point. ComposeViewport replaced CanvasBasedWindow in Compose Multiplatform 1.8+. */
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    CanvasBasedWindow(canvasElementId = "ComposeTarget") {
+    ComposeViewport(document.body!!) {
         AppRoot()
     }
 }

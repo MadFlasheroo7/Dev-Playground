@@ -32,23 +32,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import java.util.Calendar
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
+import kotlinx.datetime.isoDayNumber
+import pro.jayeshseth.devcontrols.util.nowLocal
+import pro.jayeshseth.devcontrols.util.pad
 
 /** Calendar with date-range selection, built from scratch on java.util.Calendar. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarLabScreen(onBack: () -> Unit) {
-    val today = remember { Calendar.getInstance() }
-    var year by remember { mutableIntStateOf(today.get(Calendar.YEAR)) }
-    var month by remember { mutableIntStateOf(today.get(Calendar.MONTH)) }
+    val today = remember { nowLocal() }
+    var year by remember { mutableIntStateOf(today.year) }
+    var month by remember { mutableIntStateOf(today.monthNumber - 1) } // 0-based, like java Calendar.MONTH
     var rangeStart by remember { mutableStateOf<Long?>(null) }
     var rangeEnd by remember { mutableStateOf<Long?>(null) }
 
     fun dayKey(y: Int, m: Int, d: Int) = y * 10000L + m * 100L + d
 
-    val cal = remember(year, month) { Calendar.getInstance().apply { clear(); set(year, month, 1) } }
-    val firstDow = cal.get(Calendar.DAY_OF_WEEK) - 1 // 0=Sun
-    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val first = remember(year, month) { LocalDate(year, month + 1, 1) }
+    val firstDow = first.dayOfWeek.isoDayNumber % 7 // ISO Mon=1..Sun=7 -> 0=Sun
+    val nextMonth = remember(year, month) { if (month == 11) LocalDate(year + 1, 1, 1) else LocalDate(year, month + 2, 1) }
+    val daysInMonth = first.daysUntil(nextMonth)
     val monthName = arrayOf("January","February","March","April","May","June","July","August","September","October","November","December")[month]
 
     Scaffold(
@@ -107,6 +112,6 @@ fun CalendarLabScreen(onBack: () -> Unit) {
 }
 
 private fun fmt(key: Long): String {
-    val y = (key / 10000); val m = (key / 100 % 100).toInt() + 1; val d = (key % 100)
-    return "%04d-%02d-%02d".format(y, m, d)
+    val y = (key / 10000).toInt(); val m = (key / 100 % 100).toInt() + 1; val d = (key % 100).toInt()
+    return "${y.pad(4)}-${m.pad(2)}-${d.pad(2)}"
 }

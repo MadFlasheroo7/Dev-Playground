@@ -17,7 +17,7 @@ kotlin {
         // Distinct from the app's namespace (:androidApp owns pro.jayeshseth.devcontrols). This library is
         // code-only (its res/manifest moved to :androidApp, since kmp-library doesn't export resources).
         namespace = "pro.jayeshseth.devcontrols.shared"
-        compileSdk = 36
+        compileSdk = 37
         minSdk = 30
     }
     jvm("desktop") {

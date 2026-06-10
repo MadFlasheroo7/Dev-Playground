@@ -45,7 +45,7 @@ import kotlin.math.sin
 fun ProgressGalleryLabScreen(onBack: () -> Unit) {
     var p by remember { mutableFloatStateOf(0.4f) }
     val inf = rememberInfiniteTransition(label = "p")
-    val phase by inf.animateFloat(0f, (2 * Math.PI).toFloat(),
+    val phase by inf.animateFloat(0f, (2 * kotlin.math.PI).toFloat(),
         infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart), label = "ph")
 
     Scaffold(

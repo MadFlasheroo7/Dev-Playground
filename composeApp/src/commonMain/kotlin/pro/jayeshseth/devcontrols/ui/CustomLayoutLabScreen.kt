@@ -122,7 +122,7 @@ private fun RadialLayout(rotationDeg: Float, modifier: Modifier = Modifier, cont
             val cy = h / 2f
             val count = placeables.size
             placeables.forEachIndexed { i, p ->
-                val ang = Math.toRadians((rotationDeg + i * 360f / count).toDouble())
+                val ang = (((rotationDeg + i * 360f / count).toDouble()) * kotlin.math.PI / 180.0)
                 val x = cx + (radius * cos(ang)).toFloat() - p.width / 2f
                 val y = cy + (radius * sin(ang)).toFloat() - p.height / 2f
                 p.place(x.toInt(), y.toInt())

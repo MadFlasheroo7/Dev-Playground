@@ -72,7 +72,7 @@ fun MandalaPadLabScreen(onBack: () -> Unit) {
                     }
                     for (s in strokes) {
                         for (k in 0 until folds) {
-                            val a = k * (2 * Math.PI.toFloat() / folds)
+                            val a = k * (2 * kotlin.math.PI.toFloat() / folds)
                             drawLine(s.color, rot(s.from, a), rot(s.to, a), 3f, cap = StrokeCap.Round)
                             // mirror
                             val mf = Offset(2 * cx - s.from.x, s.from.y); val mt = Offset(2 * cx - s.to.x, s.to.y)

@@ -78,7 +78,7 @@ fun FireworksLabScreen(onBack: () -> Unit) {
             Text("Tap to launch.", Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Box(Modifier.fillMaxSize().background(Color(0xFF03030A))
                 .pointerInput(Unit) { detectTapGestures { tap ->
-                    rockets.add(Rocket(tap.x, java.lang.Float.MAX_VALUE.let { 0f } + 3000f, -16f - Random.nextFloat() * 4f, tap.y, palette[Random.nextInt(palette.size)]))
+                    rockets.add(Rocket(tap.x, 3000f, -16f - Random.nextFloat() * 4f, tap.y, palette[Random.nextInt(palette.size)]))
                 } }
                 .drawBehind {
                     tick

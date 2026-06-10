@@ -51,7 +51,7 @@ fun StopwatchScreen(onBack: () -> Unit) {
     LaunchedEffect(running) {
         if (running) { lastStart = nowMillis() - elapsed; while (running) { elapsed = nowMillis() - lastStart; delay(33) } }
     }
-    fun fmt(ms: Long) = "%02d:%02d.%02d".format(ms / 60000, (ms / 1000) % 60, (ms / 10) % 100)
+    fun fmt(ms: Long) = "${(ms / 60000).pad(2)}:${((ms / 1000) % 60).pad(2)}.${((ms / 10) % 100).pad(2)}"
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Stopwatch") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },

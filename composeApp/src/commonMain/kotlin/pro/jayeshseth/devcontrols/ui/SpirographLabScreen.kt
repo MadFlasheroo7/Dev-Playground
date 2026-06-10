@@ -65,7 +65,7 @@ fun SpirographLabScreen(onBack: () -> Unit) {
                     val scale = (min(size.width, size.height) / 2f) / (bigR + dist + 10f)
                     val diff = bigR - smallR
                     val ratio = if (smallR != 0f) diff / smallR else 1f
-                    val maxTheta = (2.0 * Math.PI * 14).toFloat() * progress
+                    val maxTheta = (2.0 * kotlin.math.PI * 14).toFloat() * progress
                     val path = Path()
                     var th = 0f
                     val stepN = 1400

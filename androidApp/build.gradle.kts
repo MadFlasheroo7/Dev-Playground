@@ -7,7 +7,7 @@ android {
     // (.MainActivity, .widget.*, .adb.*) resolve correctly, and so res references (@style/Theme.DevControls,
     // @mipmap/ic_launcher, @xml/*) live in this app module's R = pro.jayeshseth.devcontrols.
     namespace = "pro.jayeshseth.devcontrols"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "pro.jayeshseth.devcontrols"

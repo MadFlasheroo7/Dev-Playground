@@ -56,7 +56,7 @@ fun GameOfLifeLabScreen(onBack: () -> Unit) {
             val alive = grid[idx(c, r)]
             next[idx(c, r)] = (alive && (n == 2 || n == 3)) || (!alive && n == 3)
         }
-        System.arraycopy(next, 0, grid, 0, grid.size)
+        next.copyInto(grid)
         gen++
     }
 

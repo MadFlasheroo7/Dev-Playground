@@ -55,7 +55,7 @@ fun TurtleReplLabScreen(onBack: () -> Unit) {
                                 when (t.name) {
                                     "F", "B" -> {
                                         val d = if (t.name == "B") -t.arg else t.arg
-                                        val r = Math.toRadians(ang.toDouble())
+                                        val r = ((ang.toDouble()) * kotlin.math.PI / 180.0)
                                         val nx = x + (cos(r) * d).toFloat(); val ny = y + (sin(r) * d).toFloat()
                                         segs.add(Offset(x, y) to Offset(nx, ny)); x = nx; y = ny
                                     }

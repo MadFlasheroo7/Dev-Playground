@@ -48,7 +48,7 @@ fun TspLabScreen(onBack: () -> Unit) {
     fun regen() {
         if (size == IntSize.Zero) return
         cities.clear()
-        repeat(18) { cities.add(Offset(40f + Math.random().toFloat() * (size.width - 80), 120f + Math.random().toFloat() * (size.height - 200))) }
+        repeat(18) { cities.add(Offset(40f + kotlin.random.Random.nextDouble().toFloat() * (size.width - 80), 120f + kotlin.random.Random.nextDouble().toFloat() * (size.height - 200))) }
         // nearest neighbour
         val visited = BooleanArray(cities.size); val t = ArrayList<Int>(); var cur = 0
         visited[0] = true; t.add(0)

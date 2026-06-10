@@ -59,7 +59,7 @@ fun SoftBodyLabScreen(onBack: () -> Unit) {
             for (i in 0 until total) { ox[i] = px[i]; oy[i] = py[i] }
             seeded[0] = true
         }
-        val restPerim = 2 * Math.PI.toFloat() * r0 / np
+        val restPerim = 2 * kotlin.math.PI.toFloat() * r0 / np
         while (true) {
             withFrameNanos {
                 val w = size.width.toFloat(); val h = size.height.toFloat()

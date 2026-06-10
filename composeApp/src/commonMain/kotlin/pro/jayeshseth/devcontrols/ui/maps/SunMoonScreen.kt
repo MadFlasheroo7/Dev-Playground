@@ -1,5 +1,8 @@
 package pro.jayeshseth.devcontrols.ui.maps
 
+import pro.jayeshseth.devcontrols.util.fmt
+import pro.jayeshseth.devcontrols.util.pad
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,8 +31,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import java.util.Calendar
-import java.util.TimeZone
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.offsetIn
+import kotlinx.datetime.toLocalDateTime
+import pro.jayeshseth.devcontrols.util.nowMillis
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.cos
@@ -52,27 +58,29 @@ fun SunMoonScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             if (lat == null || lon == null) { Text("Enter a valid location.", color = MaterialTheme.colorScheme.error); return@Column }
 
-            val cal = Calendar.getInstance()
-            val n = cal.get(Calendar.DAY_OF_YEAR)
-            val tzMin = cal.timeZone.getOffset(cal.timeInMillis) / 60000.0
-            val decl = -23.44 * cos(Math.toRadians(360.0 / 365 * (n + 10)))
-            val b = Math.toRadians(360.0 / 365 * (n - 81))
+            val tz = TimeZone.currentSystemDefault()
+            val nowInstant = Clock.System.now()
+            val ldt = nowInstant.toLocalDateTime(tz)
+            val n = ldt.dayOfYear
+            val tzMin = nowInstant.offsetIn(tz).totalSeconds / 60.0
+            val decl = -23.44 * cos(((360.0 / 365 * (n + 10)) * kotlin.math.PI / 180.0))
+            val b = ((360.0 / 365 * (n - 81)) * kotlin.math.PI / 180.0)
             val eot = 9.87 * sin(2 * b) - 7.53 * cos(b) - 1.5 * sin(b)
             val solarNoon = 720 - 4 * lon - eot + tzMin // minutes from local midnight
-            val cosHa = (sin(Math.toRadians(-0.833)) - sin(Math.toRadians(lat)) * sin(Math.toRadians(decl))) / (cos(Math.toRadians(lat)) * cos(Math.toRadians(decl)))
+            val cosHa = (sin(((-0.833) * kotlin.math.PI / 180.0)) - sin(((lat) * kotlin.math.PI / 180.0)) * sin(((decl) * kotlin.math.PI / 180.0))) / (cos(((lat) * kotlin.math.PI / 180.0)) * cos(((decl) * kotlin.math.PI / 180.0)))
             val polar = cosHa !in -1.0..1.0
-            val ha = if (polar) 0.0 else Math.toDegrees(acos(cosHa))
+            val ha = if (polar) 0.0 else ((acos(cosHa)) * 180.0 / kotlin.math.PI)
             val sunrise = solarNoon - 4 * ha; val sunset = solarNoon + 4 * ha
-            val nowMin = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE).toDouble()
-            val haNow = Math.toRadians((nowMin - solarNoon) / 4)
-            val altNow = Math.toDegrees(asin(sin(Math.toRadians(lat)) * sin(Math.toRadians(decl)) + cos(Math.toRadians(lat)) * cos(Math.toRadians(decl)) * cos(haNow)))
+            val nowMin = ldt.hour * 60 + ldt.minute.toDouble()
+            val haNow = (((nowMin - solarNoon) / 4) * kotlin.math.PI / 180.0)
+            val altNow = (asin(sin(((lat) * kotlin.math.PI / 180.0)) * sin(((decl) * kotlin.math.PI / 180.0)) + cos(((lat) * kotlin.math.PI / 180.0)) * cos(((decl) * kotlin.math.PI / 180.0)) * cos(haNow))) * 180.0 / kotlin.math.PI
 
             // moon phase
-            val jd = cal.timeInMillis / 86400000.0 + 2440587.5
+            val jd = nowMillis() / 86400000.0 + 2440587.5
             val phase = (((jd - 2451550.1) / 29.530588853) % 1 + 1) % 1
-            val illum = (1 - cos(2 * Math.PI * phase)) / 2
+            val illum = (1 - cos(2 * kotlin.math.PI * phase)) / 2
 
-            fun hhmm(min: Double): String { val m = ((min % 1440) + 1440) % 1440; return "%02d:%02d".format((m / 60).toInt(), (m % 60).toInt()) }
+            fun hhmm(min: Double): String { val m = ((min % 1440) + 1440) % 1440; return "${(m / 60).toInt().pad(2)}:${(m % 60).toInt().pad(2)}" }
 
             // sun arc
             Canvas(Modifier.fillMaxWidth().height(140.dp)) {
@@ -80,12 +88,12 @@ fun SunMoonScreen(onBack: () -> Unit) {
                 drawLine(Color(0xFF555B6E), Offset(0f, baseY), Offset(w, baseY), 2f)
                 val path = androidx.compose.ui.graphics.Path()
                 var x = 0f; path.moveTo(0f, baseY)
-                while (x <= w) { val t = x / w; val arc = sin(t * Math.PI).toFloat(); path.lineTo(x, baseY - arc * (h - 30)); x += 6f }
+                while (x <= w) { val t = x / w; val arc = sin(t * kotlin.math.PI).toFloat(); path.lineTo(x, baseY - arc * (h - 30)); x += 6f }
                 drawPath(path, Color(0x55FFD54F), style = Stroke(3f))
                 // current sun pos by time fraction between sunrise..sunset
                 if (!polar && nowMin in sunrise..sunset) {
                     val t = ((nowMin - sunrise) / (sunset - sunrise)).toFloat()
-                    val arc = sin(t * Math.PI).toFloat()
+                    val arc = sin(t * kotlin.math.PI).toFloat()
                     drawCircle(Color(0xFFFFC107), 14f, Offset(t * w, baseY - arc * (h - 30)))
                 }
             }
@@ -94,7 +102,7 @@ fun SunMoonScreen(onBack: () -> Unit) {
             Info("Solar noon", hhmm(solarNoon))
             Info("Sunset", if (polar) "—" else hhmm(sunset))
             Info("Day length", if (polar) "polar day/night" else hhmm(sunset - sunrise))
-            Info("Sun altitude now", "%.1f°".format(altNow))
+            Info("Sun altitude now", "${fmt(altNow, 1)}°")
             Spacer(Modifier.height(8.dp))
             Info("Moon phase", "${moonName(phase)} · ${(illum * 100).toInt()}% lit ${moonEmoji(phase)}")
             Spacer(Modifier.height(8.dp))
