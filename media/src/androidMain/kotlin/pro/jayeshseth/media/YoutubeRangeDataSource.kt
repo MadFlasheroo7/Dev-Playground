@@ -46,6 +46,8 @@ internal class YoutubeRangeDataSource(
     private var currentBody: okhttp3.ResponseBody? = null
     /** true once [transferStarted] has fired, so [close] only balances it then (avoids a bandwidth-meter NPE). */
     private var opened = false
+    /** incrementing per-request number YouTube expects on sequential chunk fetches */
+    private var requestNumber = 0L
 
     /** Non-null when the URL isn't a googlevideo stream and we just proxy a normal HTTP data source. */
     private var delegate: DefaultHttpDataSource? = null
@@ -100,7 +102,7 @@ internal class YoutubeRangeDataSource(
 
         val rawEnd = position + CHUNK - 1
         val end = if (bytesRemaining != C.LENGTH_UNSET.toLong()) minOf(rawEnd, position + bytesRemaining - 1) else rawEnd
-        val url = baseUrl + (if (baseUrl.contains('?')) '&' else '?') + "range=$position-$end"
+        val url = baseUrl + (if (baseUrl.contains('?')) '&' else '?') + "range=$position-$end&rn=${requestNumber++}"
 
         val response = client.newCall(
             Request.Builder().url(url).header("User-Agent", USER_AGENT).get().build()
@@ -137,7 +139,9 @@ internal class YoutubeRangeDataSource(
     override fun getUri(): Uri? = delegate?.uri ?: spec?.uri
 
     companion object {
-        private const val CHUNK = 1L shl 20 // 1 MiB per range request (well under YouTube's limit)
+        // YouTube rejects per-request ranges larger than ~512 KiB on these URLs (1 MiB → HTTP 403),
+        // so keep each chunk at 512 KiB.
+        private const val CHUNK = 512L shl 10
         private const val USER_AGENT =
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"

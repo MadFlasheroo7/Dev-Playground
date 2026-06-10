@@ -31,6 +31,9 @@ class DesktopMediaController : MediaController {
 
     private val component: AudioPlayerComponent? = runCatching { AudioPlayerComponent() }.getOrNull()
 
+    /** Bridges YouTube's bounded-range requirement to VLC (which sends open-ended ranges → 403). */
+    private val proxy = YoutubeStreamProxy()
+
     init {
         available = component != null
         if (component != null) {
@@ -46,10 +49,14 @@ class DesktopMediaController : MediaController {
         }
     }
 
-    override fun play(url: String) { component?.mediaPlayer()?.media()?.play(url) }
+    override fun play(url: String) {
+        // Route googlevideo URLs through the local range-proxy; play anything else (HLS/DASH) directly.
+        val playUrl = if (url.contains("googlevideo.com")) runCatching { proxy.start(url) }.getOrDefault(url) else url
+        component?.mediaPlayer()?.media()?.play(playUrl)
+    }
     override fun pause() { component?.mediaPlayer()?.controls()?.setPause(true) }
     override fun resume() { component?.mediaPlayer()?.controls()?.setPause(false) }
     override fun stop() { component?.mediaPlayer()?.controls()?.stop() }
     override fun seekTo(ms: Long) { component?.mediaPlayer()?.controls()?.setTime(ms) }
-    override fun release() { scope.cancel(); component?.release() }
+    override fun release() { scope.cancel(); proxy.stop(); component?.release() }
 }
