@@ -45,31 +45,44 @@ internal class MpvMediaController : MediaController {
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
     private val _durationMs = MutableStateFlow(0L)
+    private val _buffering = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
     override val playing: StateFlow<Boolean> = _playing
     override val positionMs: StateFlow<Long> = _positionMs
     override val durationMs: StateFlow<Long> = _durationMs
+    override val buffering: StateFlow<Boolean> = _buffering
+    override val error: StateFlow<String?> = _error
 
     private val socketPath: Path = Files.createTempFile("dc-mpv-", ".sock").also { Files.deleteIfExists(it) }
     private var process: Process? = null
     @Volatile private var channel: SocketChannel? = null
 
     init {
-        process = ProcessBuilder(
-            "mpv", "--idle=yes", "--no-video", "--no-terminal", "--really-quiet",
-            "--no-config", "--input-ipc-server=$socketPath",
-            // Bound read-ahead so mpv pulls data at roughly playback pace instead of slurping the whole
-            // song in one burst — a burst of rapid range requests trips YouTube's rate limiter and a
-            // chunk 403s mid-stream, cutting playback off after ~a minute.
-            "--cache=yes", "--demuxer-readahead-secs=30", "--demuxer-max-bytes=8MiB", "--demuxer-max-back-bytes=4MiB",
-        ).redirectErrorStream(true).start()
+        val proc = runCatching {
+            ProcessBuilder(
+                "mpv", "--idle=yes", "--no-video", "--no-terminal", "--really-quiet",
+                "--no-config", "--input-ipc-server=$socketPath",
+                // Bound read-ahead so mpv pulls data at roughly playback pace instead of slurping the whole
+                // song in one burst — a burst of rapid range requests trips YouTube's rate limiter and a
+                // chunk 403s mid-stream, cutting playback off after ~a minute.
+                "--cache=yes", "--demuxer-readahead-secs=30", "--demuxer-max-bytes=8MiB", "--demuxer-max-back-bytes=4MiB",
+            ).redirectErrorStream(true).start()
+        }.getOrElse {
+            _error.value = "mpv could not start: ${it.message}"
+            null
+        }
+        process = proc
 
         // Connect once mpv has created the socket (it does so asynchronously after launch).
-        thread(isDaemon = true, name = "mpv-ipc") {
-            val ch = connectWithRetry() ?: return@thread
+        if (proc != null) thread(isDaemon = true, name = "mpv-ipc") {
+            val ch = connectWithRetry()
+            if (ch == null) { _error.value = "Could not connect to mpv IPC socket"; return@thread }
             channel = ch
             send(observe(1, "time-pos"))
             send(observe(2, "duration"))
             send(observe(3, "pause"))
+            send(observe(4, "paused-for-cache")) // true while buffering / waiting for the stream
+            send(observe(5, "core-idle"))         // true when not actively decoding (loading or stalled)
             readLoop(ch)
         }
     }
@@ -115,11 +128,17 @@ internal class MpvMediaController : MediaController {
         when (name) {
             "time-pos" -> _positionMs.value = ((data as? JsonPrimitive)?.doubleOrZero() ?: 0.0).times(1000).toLong()
             "duration" -> _durationMs.value = ((data as? JsonPrimitive)?.doubleOrZero() ?: 0.0).times(1000).toLong()
-            "pause" -> _playing.value = (data as? JsonPrimitive)?.runCatching { boolean }?.getOrNull() == false
+            "pause" -> _playing.value = (data as? JsonPrimitive)?.boolOrNull() == false
+            "paused-for-cache" -> if ((data as? JsonPrimitive)?.boolOrNull() == true) _buffering.value = true
+                                  else if (_positionMs.value > 0) _buffering.value = false
+            "core-idle" -> if ((data as? JsonPrimitive)?.boolOrNull() == false) _buffering.value = false
         }
     }
 
     override fun play(url: String) {
+        _error.value = null
+        _buffering.value = true // loading until the first bytes decode
+        _positionMs.value = 0; _durationMs.value = 0
         val playUrl = if (url.contains("googlevideo.com")) runCatching { proxy.start(url) }.getOrDefault(url) else url
         send(buildJsonObject { putJsonArray("command") { add("loadfile"); add(playUrl); add("replace") } }.toString())
         send(setPause(false))
@@ -162,3 +181,4 @@ internal class MpvMediaController : MediaController {
 }
 
 private fun JsonPrimitive.doubleOrZero(): Double = runCatching { double }.getOrDefault(0.0)
+private fun JsonPrimitive.boolOrNull(): Boolean? = runCatching { boolean }.getOrNull()

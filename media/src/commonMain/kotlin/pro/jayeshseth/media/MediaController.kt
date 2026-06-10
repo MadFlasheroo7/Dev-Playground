@@ -15,6 +15,10 @@ interface MediaController {
     val playing: StateFlow<Boolean>
     val positionMs: StateFlow<Long>
     val durationMs: StateFlow<Long>
+    /** True while the player is loading/buffering (resolving, opening the stream, or refilling its cache). */
+    val buffering: StateFlow<Boolean>
+    /** Last fatal playback error message, or null. Lets the UI distinguish "still loading" from "broken". */
+    val error: StateFlow<String?>
 
     /** Load [url] and start playback. */
     fun play(url: String)

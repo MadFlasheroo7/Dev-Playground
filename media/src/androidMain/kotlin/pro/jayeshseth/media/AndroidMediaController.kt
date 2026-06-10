@@ -38,13 +38,24 @@ class AndroidMediaController(context: Context) : MediaController {
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
     private val _durationMs = MutableStateFlow(0L)
+    private val _buffering = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
     override val playing: StateFlow<Boolean> = _playing
     override val positionMs: StateFlow<Long> = _positionMs
     override val durationMs: StateFlow<Long> = _durationMs
+    override val buffering: StateFlow<Boolean> = _buffering
+    override val error: StateFlow<String?> = _error
 
     init {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { _playing.value = isPlaying }
+            override fun onPlaybackStateChanged(state: Int) {
+                _buffering.value = state == Player.STATE_BUFFERING
+            }
+            override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
+                _error.value = e.errorCodeName + ": " + (e.message ?: "playback error")
+                _buffering.value = false
+            }
         })
         scope.launch {
             while (isActive) {
@@ -56,6 +67,7 @@ class AndroidMediaController(context: Context) : MediaController {
     }
 
     override fun play(url: String) {
+        _error.value = null; _buffering.value = true
         player.setMediaItem(Media3Item.fromUri(url)); player.prepare(); player.playWhenReady = true
     }
     override fun pause() { player.playWhenReady = false }

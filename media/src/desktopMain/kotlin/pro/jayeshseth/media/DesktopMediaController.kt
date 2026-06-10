@@ -22,9 +22,13 @@ class DesktopMediaController : MediaController {
     private val _playing = MutableStateFlow(false)
     private val _positionMs = MutableStateFlow(0L)
     private val _durationMs = MutableStateFlow(0L)
+    private val _buffering = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
     override val playing: StateFlow<Boolean> = _playing
     override val positionMs: StateFlow<Long> = _positionMs
     override val durationMs: StateFlow<Long> = _durationMs
+    override val buffering: StateFlow<Boolean> = _buffering
+    override val error: StateFlow<String?> = _error
 
     /** False if native libVLC could not be loaded (playback unavailable, extraction still works). */
     val available: Boolean
@@ -36,20 +40,28 @@ class DesktopMediaController : MediaController {
 
     init {
         available = component != null
-        if (component != null) {
+        if (component == null) {
+            _error.value = "libVLC not found — install VLC, or mpv is used when available"
+        } else {
             scope.launch {
                 while (isActive) {
                     val mp = component.mediaPlayer()
-                    _playing.value = mp.status().isPlaying
-                    _positionMs.value = mp.status().time().coerceAtLeast(0)
+                    val playing = mp.status().isPlaying
+                    val pos = mp.status().time().coerceAtLeast(0)
+                    _playing.value = playing
+                    _positionMs.value = pos
                     _durationMs.value = mp.status().length().coerceAtLeast(0)
+                    _buffering.value = !playing && _wantPlaying && pos <= 0
                     delay(400)
                 }
             }
         }
     }
 
+    @Volatile private var _wantPlaying = false
+
     override fun play(url: String) {
+        _error.value = null; _wantPlaying = true; _buffering.value = true
         // Route googlevideo URLs through the local range-proxy; play anything else (HLS/DASH) directly.
         val playUrl = if (url.contains("googlevideo.com")) runCatching { proxy.start(url) }.getOrDefault(url) else url
         component?.mediaPlayer()?.media()?.play(playUrl)

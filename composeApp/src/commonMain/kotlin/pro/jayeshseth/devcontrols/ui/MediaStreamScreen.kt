@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -56,10 +58,13 @@ fun MediaStreamScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var nowPlaying by remember { mutableStateOf<MediaItem?>(null) }
+    var resolving by remember { mutableStateOf(false) } // true from tap until the stream is resolved+handed to the player
 
     val playing by controller.playing.collectAsState()
     val positionMs by controller.positionMs.collectAsState()
     val durationMs by controller.durationMs.collectAsState()
+    val buffering by controller.buffering.collectAsState()
+    val playerError by controller.error.collectAsState()
 
     DisposableEffect(Unit) { onDispose { controller.release() } }
 
@@ -75,12 +80,13 @@ fun MediaStreamScreen(onBack: () -> Unit) {
 
     fun playItem(item: MediaItem) {
         scope.launch {
-            error = null
+            error = null; nowPlaying = item; resolving = true
             runCatching {
                 val url = source.resolve(item.id).bestPlayable()
                     ?: throw IllegalStateException("No playable stream (YouTube may have blocked extraction)")
-                controller.play(url); nowPlaying = item
+                controller.play(url)
             }.onFailure { error = "Playback failed: ${it.message}" }
+            resolving = false
         }
     }
 
@@ -90,15 +96,30 @@ fun MediaStreamScreen(onBack: () -> Unit) {
             nowPlaying?.let { np ->
                 Column(Modifier.fillMaxWidth().padding(12.dp)) {
                     HorizontalDivider()
+                    val loadingNow = resolving || buffering
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(np.title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                        TextButton(onClick = { if (playing) controller.pause() else controller.resume() }) { Text(if (playing) "❚❚" else "▶") }
+                        if (loadingNow) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            TextButton(onClick = { if (playing) controller.pause() else controller.resume() }) { Text(if (playing) "❚❚" else "▶") }
+                        }
                     }
                     Slider(
                         value = if (durationMs > 0) (positionMs.toFloat() / durationMs) else 0f,
                         onValueChange = { if (durationMs > 0) controller.seekTo((it * durationMs).toLong()) }
                     )
-                    Text("${fmt(positionMs)} / ${fmt(durationMs)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val status = when {
+                        playerError != null -> "⚠ $playerError"
+                        resolving -> "Resolving stream…"
+                        buffering -> "Buffering…"
+                        else -> "${fmt(positionMs)} / ${fmt(durationMs)}"
+                    }
+                    Text(
+                        status,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (playerError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },
