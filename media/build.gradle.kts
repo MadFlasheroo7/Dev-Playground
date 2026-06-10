@@ -1,19 +1,38 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kmp.library)
+}
+
+// SPIKE diagnostic: force Kotlin stdlib to match the 2.2.10 compiler (AGP9 kmp-library pulls 2.3.21).
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+            useVersion("2.2.10")
+        }
+    }
 }
 
 kotlin {
-    androidTarget {
-        compilerOptions { jvmTarget.set(JvmTarget.JVM_11) }
+    // com.android.kotlin.multiplatform.library: the Android target is declared here (no top-level android{}).
+    androidLibrary {
+        namespace = "pro.jayeshseth.media"
+        compileSdk = 36
+        minSdk = 30
     }
     jvm("desktop") {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
-    // iOS + Wasm targets are added later (Media 5) — they use the Piped REST actuals and can't
-    // build on this Linux host anyway.
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs { browser() }
+    // iOS targets added later (Media 5).
+
+    // Keep the default hierarchy (commonMain → every target incl. wasm) AND add a jvmShared intermediate
+    // for the JVM targets. Without applyDefaultHierarchyTemplate(), the manual dependsOn edges below would
+    // disable the template and orphan wasmJs from commonMain (→ stdlib unresolved on wasm).
+    applyDefaultHierarchyTemplate()
 
     sourceSets {
         // Intermediate source set shared by the two JVM targets, where the NewPipeExtractor
@@ -43,17 +62,5 @@ kotlin {
         desktopMain.dependencies {
             implementation(libs.vlcj)
         }
-    }
-}
-
-android {
-    namespace = "pro.jayeshseth.media"
-    compileSdk = 36
-    defaultConfig {
-        minSdk = 30
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
     }
 }

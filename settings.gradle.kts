@@ -24,6 +24,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "DevControls"
-include(":composeApp")
+// include(":composeApp") // TEMP (spike): isolated while validating :media on kmp-library + no bypass
 include(":media")
  
