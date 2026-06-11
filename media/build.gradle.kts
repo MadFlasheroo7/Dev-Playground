@@ -20,7 +20,11 @@ kotlin {
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs { browser() }
     js(IR) { browser() }
-    // iOS targets added later (Media 5).
+    // iOS targets — declared so iosMain is authored & ready; build/link requires macOS (Xcode), so the
+    // iOS compile tasks won't run on this Linux host (other targets are unaffected).
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     // Keep the default hierarchy (commonMain → every target incl. wasm) AND add a jvmShared intermediate
     // for the JVM targets. Without applyDefaultHierarchyTemplate(), the manual dependsOn edges below would
@@ -36,6 +40,7 @@ kotlin {
         val desktopMain by getting { dependsOn(jvmShared) }
         // webMain (js + wasmJs) is provided by the default hierarchy template; Piped REST search lives there.
         val webMain by getting
+        val iosMain by getting // appleMain/iosMain from the default hierarchy template
 
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
@@ -44,6 +49,9 @@ kotlin {
         }
         webMain.dependencies {
             implementation(libs.ktor.client.js) // browser fetch engine — search via the Piped REST API
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin) // iOS HTTP engine — Piped REST search
         }
         jvmShared.dependencies {
             implementation(libs.newpipeextractor)

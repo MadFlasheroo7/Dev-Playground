@@ -32,6 +32,11 @@ kotlin {
         browser { commonWebpackConfig { outputFileName = "devcontrols.js" } }
         binaries.executable()
     }
+    // iOS — declared so iosMain is authored & ready; the iOS app/framework is built on macOS (Xcode),
+    // so these targets' compile/link tasks don't run on this Linux host (others are unaffected).
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
     applyDefaultHierarchyTemplate()
 
     sourceSets {
