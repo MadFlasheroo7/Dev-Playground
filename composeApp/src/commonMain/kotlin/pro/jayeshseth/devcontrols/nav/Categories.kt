@@ -12,6 +12,23 @@ val labCategories: List<LabCategoryDef> = listOf(
         ),
     ),
     LabCategoryDef(
+        "Learning Labs",
+        listOf(
+        LabItem("Kotlin Flow Learner", Route.FLOW_LEARNER),
+        LabItem("Compose Recomposition", Route.RECOMPOSITION_VISUALIZER),
+        LabItem("Coroutine Dispatchers", Route.DISPATCHER_VISUALIZER),
+        LabItem("Structured Concurrency", Route.CONCURRENCY_VISUALIZER),
+        LabItem("API Models (REST/GraphQL/WS)", Route.API_VISUALIZER),
+        LabItem("Cryptography Lab", Route.CRYPTO_VISUALIZER),
+        LabItem("Database Indexing", Route.DB_INDEX_VISUALIZER),
+        LabItem("TCP Handshake & OSI", Route.TCP_VISUALIZER),
+        LabItem("Git Branch & Rebase", Route.GIT_VISUALIZER),
+        LabItem("Compose Phase Pipeline", Route.COMPOSE_PHASES),
+        LabItem("Modifier Constraints Flow", Route.CONSTRAINT_FLOW),
+        LabItem("Lazy Viewport Lifecycle", Route.LAZY_LIFECYCLE),
+        ),
+    ),
+    LabCategoryDef(
         "System & ADB",
         listOf(
         LabItem("adb_g — local shell", Route.ADB_CONSOLE),
@@ -394,6 +411,12 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Plasma", Route.PLASMA),
         LabItem("Weather", Route.WEATHER),
         LabItem("Pixel Art", Route.PIXEL_ART),
+        ),
+    ),
+    LabCategoryDef(
+        "Parsers",
+        listOf(
+        LabItem("HTML Parser & Live Render", Route.HTML_PARSER_PLAYGROUND),
         ),
     ),
 )

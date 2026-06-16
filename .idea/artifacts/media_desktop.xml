@@ -1,8 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="jar" name="media-desktop">
     <output-path>$PROJECT_DIR$/media/build/libs</output-path>
-    <root id="archive" name="media-desktop.jar">
-      <element id="module-output" name="DevControls.media.desktopMain" />
-    </root>
+    <root id="archive" name="media-desktop.jar" />
   </artifact>
 </component>

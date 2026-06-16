@@ -69,6 +69,19 @@ import pro.jayeshseth.devcontrols.ui.AdbConsoleScreen
 import pro.jayeshseth.devcontrols.ui.A11yCloakScreen
 import pro.jayeshseth.devcontrols.ui.A11yDetectionScreen
 import pro.jayeshseth.devcontrols.ui.AdbDetectionScreen
+import pro.jayeshseth.devcontrols.ui.FlowLearnerScreen
+import pro.jayeshseth.devcontrols.ui.RecompositionVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.DispatcherVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.ConcurrencyVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.ApiVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.CryptoVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.DbIndexVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.TcpVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.GitVisualizerScreen
+import pro.jayeshseth.devcontrols.ui.ComposePhasesScreen
+import pro.jayeshseth.devcontrols.ui.ConstraintFlowScreen
+import pro.jayeshseth.devcontrols.ui.LazyLifecycleScreen
+import pro.jayeshseth.devcontrols.ui.HtmlParserPlaygroundScreen
 import pro.jayeshseth.devcontrols.ui.DisplayLabScreen
 import pro.jayeshseth.devcontrols.ui.GestureLabScreen
 import pro.jayeshseth.devcontrols.ui.AudioReactiveLabScreen
@@ -647,6 +660,19 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.DECK_EDITOR -> DeckEditorScreen(onBack = onBack)
         Route.GRADIENT_MORPH -> GradientMorphLabScreen(onBack = onBack)
         Route.MEDIA_STREAM -> MediaStreamScreen(onBack = onBack)
+        Route.FLOW_LEARNER -> FlowLearnerScreen(onBack = onBack)
+        Route.RECOMPOSITION_VISUALIZER -> RecompositionVisualizerScreen(onBack = onBack)
+        Route.DISPATCHER_VISUALIZER -> DispatcherVisualizerScreen(onBack = onBack)
+        Route.CONCURRENCY_VISUALIZER -> ConcurrencyVisualizerScreen(onBack = onBack)
+        Route.API_VISUALIZER -> ApiVisualizerScreen(onBack = onBack)
+        Route.CRYPTO_VISUALIZER -> CryptoVisualizerScreen(onBack = onBack)
+        Route.DB_INDEX_VISUALIZER -> DbIndexVisualizerScreen(onBack = onBack)
+        Route.TCP_VISUALIZER -> TcpVisualizerScreen(onBack = onBack)
+        Route.GIT_VISUALIZER -> GitVisualizerScreen(onBack = onBack)
+        Route.COMPOSE_PHASES -> ComposePhasesScreen(onBack = onBack)
+        Route.CONSTRAINT_FLOW -> ConstraintFlowScreen(onBack = onBack)
+        Route.LAZY_LIFECYCLE -> LazyLifecycleScreen(onBack = onBack)
+        Route.HTML_PARSER_PLAYGROUND -> HtmlParserPlaygroundScreen(onBack = onBack)
     }
 }
 

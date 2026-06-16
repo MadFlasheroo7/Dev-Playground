@@ -12,6 +12,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.ACCORDION -> pro.jayeshseth.devcontrols.ui.AccordionLabScreen(onBack = onBack)
         Route.ANIMATED_BORDERS -> pro.jayeshseth.devcontrols.ui.AnimatedBordersLabScreen(onBack = onBack)
         Route.ANIMATED_CONTENT -> pro.jayeshseth.devcontrols.ui.AnimatedContentGalleryScreen(onBack = onBack)
+        Route.API_VISUALIZER -> pro.jayeshseth.devcontrols.ui.ApiVisualizerScreen(onBack = onBack)
         Route.BILLIARDS -> pro.jayeshseth.devcontrols.ui.BilliardsLabScreen(onBack = onBack)
         Route.BOIDS -> pro.jayeshseth.devcontrols.ui.BoidsLabScreen(onBack = onBack)
         Route.BOTTOM_SHEET -> pro.jayeshseth.devcontrols.ui.BottomSheetLabScreen(onBack = onBack)
@@ -26,14 +27,20 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.CLOTH -> pro.jayeshseth.devcontrols.ui.ClothLabScreen(onBack = onBack)
         Route.COACH_MARK -> pro.jayeshseth.devcontrols.ui.CoachMarkLabScreen(onBack = onBack)
         Route.COLOR_PICKER -> pro.jayeshseth.devcontrols.ui.ColorPickerLabScreen(onBack = onBack)
+        Route.COMPOSE_PHASES -> pro.jayeshseth.devcontrols.ui.ComposePhasesScreen(onBack = onBack)
         Route.CONFETTI -> pro.jayeshseth.devcontrols.ui.ConfettiLabScreen(onBack = onBack)
+        Route.CONCURRENCY_VISUALIZER -> pro.jayeshseth.devcontrols.ui.ConcurrencyVisualizerScreen(onBack = onBack)
+        Route.CONSTRAINT_FLOW -> pro.jayeshseth.devcontrols.ui.ConstraintFlowScreen(onBack = onBack)
         Route.CONIC_GLOW -> pro.jayeshseth.devcontrols.ui.visualfx.ConicGlowBorderScreen(onBack = onBack)
         Route.CONVEX_HULL -> pro.jayeshseth.devcontrols.ui.ConvexHullLabScreen(onBack = onBack)
         Route.COORD_TOOLS -> pro.jayeshseth.devcontrols.ui.maps.CoordinateToolsScreen(onBack = onBack)
+        Route.CRYPTO_VISUALIZER -> pro.jayeshseth.devcontrols.ui.CryptoVisualizerScreen(onBack = onBack)
         Route.CUSTOM_LAYOUT -> pro.jayeshseth.devcontrols.ui.CustomLayoutLabScreen(onBack = onBack)
         Route.DATA_TABLE -> pro.jayeshseth.devcontrols.ui.DataTableLabScreen(onBack = onBack)
+        Route.DB_INDEX_VISUALIZER -> pro.jayeshseth.devcontrols.ui.DbIndexVisualizerScreen(onBack = onBack)
         Route.DECK_EDITOR -> pro.jayeshseth.devcontrols.ui.present.DeckEditorScreen(onBack = onBack)
         Route.DELAUNAY -> pro.jayeshseth.devcontrols.ui.DelaunayLabScreen(onBack = onBack)
+        Route.DISPATCHER_VISUALIZER -> pro.jayeshseth.devcontrols.ui.DispatcherVisualizerScreen(onBack = onBack)
         Route.DOODLE_PHYSICS -> pro.jayeshseth.devcontrols.ui.DoodlePhysicsLabScreen(onBack = onBack)
         Route.DOUBLE_PENDULUM -> pro.jayeshseth.devcontrols.ui.DoublePendulumLabScreen(onBack = onBack)
         Route.DYNAMIC_ISLAND -> pro.jayeshseth.devcontrols.ui.visualfx.DynamicIslandScreen(onBack = onBack)
@@ -41,21 +48,25 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.FIREWORKS -> pro.jayeshseth.devcontrols.ui.FireworksLabScreen(onBack = onBack)
         Route.FLIP_CLOCK -> pro.jayeshseth.devcontrols.ui.FlipClockLabScreen(onBack = onBack)
         Route.FLOW_FIELD -> pro.jayeshseth.devcontrols.ui.FlowFieldLabScreen(onBack = onBack)
+        Route.FLOW_LEARNER -> pro.jayeshseth.devcontrols.ui.FlowLearnerScreen(onBack = onBack)
         Route.FRACTAL_TREE -> pro.jayeshseth.devcontrols.ui.FractalTreeLabScreen(onBack = onBack)
         Route.FUNCTION_PLOTTER -> pro.jayeshseth.devcontrols.ui.FunctionPlotterLabScreen(onBack = onBack)
         Route.GALTON -> pro.jayeshseth.devcontrols.ui.GaltonBoardLabScreen(onBack = onBack)
         Route.GAME_2048 -> pro.jayeshseth.devcontrols.ui.Game2048Screen(onBack = onBack)
         Route.GAME_OF_LIFE -> pro.jayeshseth.devcontrols.ui.GameOfLifeLabScreen(onBack = onBack)
+        Route.GIT_VISUALIZER -> pro.jayeshseth.devcontrols.ui.GitVisualizerScreen(onBack = onBack)
         Route.GLOBE -> pro.jayeshseth.devcontrols.ui.PointCloudGlobeLabScreen(onBack = onBack)
         Route.GOOEY_NAV -> pro.jayeshseth.devcontrols.ui.visualfx.GooeyNavBarScreen(onBack = onBack)
         Route.GRADIENT_MORPH -> pro.jayeshseth.devcontrols.ui.GradientMorphLabScreen(onBack = onBack)
         Route.HASHING -> pro.jayeshseth.devcontrols.ui.privacy.HashingScreen(onBack = onBack)
         Route.HEIGHTMAP3D -> pro.jayeshseth.devcontrols.ui.Heightmap3DLabScreen(onBack = onBack)
+        Route.HTML_PARSER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.HtmlParserPlaygroundScreen(onBack = onBack)
         Route.IME_INSETS -> pro.jayeshseth.devcontrols.ui.ImeInsetsLabScreen(onBack = onBack)
         Route.JSON_FMT -> pro.jayeshseth.devcontrols.ui.devtools.JsonFormatterScreen(onBack = onBack)
         Route.JWT_DECODE -> pro.jayeshseth.devcontrols.ui.devtools.JwtDecoderScreen(onBack = onBack)
         Route.KALEIDOSCOPE -> pro.jayeshseth.devcontrols.ui.KaleidoscopeLabScreen(onBack = onBack)
         Route.KANBAN -> pro.jayeshseth.devcontrols.ui.KanbanLabScreen(onBack = onBack)
+        Route.LAZY_LIFECYCLE -> pro.jayeshseth.devcontrols.ui.LazyLifecycleScreen(onBack = onBack)
         Route.LIGHTNING -> pro.jayeshseth.devcontrols.ui.LightningLabScreen(onBack = onBack)
         Route.LIQUID_SWIPE -> pro.jayeshseth.devcontrols.ui.visualfx.LiquidSwipeScreen(onBack = onBack)
         Route.LSYSTEM -> pro.jayeshseth.devcontrols.ui.LSystemLabScreen(onBack = onBack)
@@ -95,6 +106,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.RAYCASTER -> pro.jayeshseth.devcontrols.ui.RaycasterLabScreen(onBack = onBack)
         Route.REGEX_TEST -> pro.jayeshseth.devcontrols.ui.devtools.RegexTesterScreen(onBack = onBack)
         Route.REORDER_LIST -> pro.jayeshseth.devcontrols.ui.ReorderListLabScreen(onBack = onBack)
+        Route.RECOMPOSITION_VISUALIZER -> pro.jayeshseth.devcontrols.ui.RecompositionVisualizerScreen(onBack = onBack)
         Route.SCRATCH -> pro.jayeshseth.devcontrols.ui.ScratchRevealLabScreen(onBack = onBack)
         Route.SEGMENTED -> pro.jayeshseth.devcontrols.ui.SegmentedControlLabScreen(onBack = onBack)
         Route.SHARED_ELEMENT -> pro.jayeshseth.devcontrols.ui.SharedElementLabScreen(onBack = onBack)
@@ -115,6 +127,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.SUN_MOON -> pro.jayeshseth.devcontrols.ui.maps.SunMoonScreen(onBack = onBack)
         Route.SWIPE_CARD -> pro.jayeshseth.devcontrols.ui.SwipeCardLabScreen(onBack = onBack)
         Route.TAG_INPUT -> pro.jayeshseth.devcontrols.ui.TagInputLabScreen(onBack = onBack)
+        Route.TCP_VISUALIZER -> pro.jayeshseth.devcontrols.ui.TcpVisualizerScreen(onBack = onBack)
         Route.TETRIS -> pro.jayeshseth.devcontrols.ui.TetrisLiteScreen(onBack = onBack)
         Route.TIMELINE -> pro.jayeshseth.devcontrols.ui.TimelineLabScreen(onBack = onBack)
         Route.TOUCH_INTERNALS -> pro.jayeshseth.devcontrols.ui.TouchInternalsLabScreen(onBack = onBack)
@@ -139,6 +152,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.ACCORDION,
     Route.ANIMATED_BORDERS,
     Route.ANIMATED_CONTENT,
+    Route.API_VISUALIZER,
     Route.BILLIARDS,
     Route.BOIDS,
     Route.BOTTOM_SHEET,
@@ -153,14 +167,20 @@ val commonRoutes: Set<Route> = setOf(
     Route.CLOTH,
     Route.COACH_MARK,
     Route.COLOR_PICKER,
+    Route.COMPOSE_PHASES,
     Route.CONFETTI,
+    Route.CONCURRENCY_VISUALIZER,
+    Route.CONSTRAINT_FLOW,
     Route.CONIC_GLOW,
     Route.CONVEX_HULL,
     Route.COORD_TOOLS,
+    Route.CRYPTO_VISUALIZER,
     Route.CUSTOM_LAYOUT,
     Route.DATA_TABLE,
+    Route.DB_INDEX_VISUALIZER,
     Route.DECK_EDITOR,
     Route.DELAUNAY,
+    Route.DISPATCHER_VISUALIZER,
     Route.DOODLE_PHYSICS,
     Route.DOUBLE_PENDULUM,
     Route.DYNAMIC_ISLAND,
@@ -168,21 +188,25 @@ val commonRoutes: Set<Route> = setOf(
     Route.FIREWORKS,
     Route.FLIP_CLOCK,
     Route.FLOW_FIELD,
+    Route.FLOW_LEARNER,
     Route.FRACTAL_TREE,
     Route.FUNCTION_PLOTTER,
     Route.GALTON,
     Route.GAME_2048,
     Route.GAME_OF_LIFE,
+    Route.GIT_VISUALIZER,
     Route.GLOBE,
     Route.GOOEY_NAV,
     Route.GRADIENT_MORPH,
     Route.HASHING,
     Route.HEIGHTMAP3D,
+    Route.HTML_PARSER_PLAYGROUND,
     Route.IME_INSETS,
     Route.JSON_FMT,
     Route.JWT_DECODE,
     Route.KALEIDOSCOPE,
     Route.KANBAN,
+    Route.LAZY_LIFECYCLE,
     Route.LIGHTNING,
     Route.LIQUID_SWIPE,
     Route.LSYSTEM,
@@ -222,6 +246,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.RAYCASTER,
     Route.REGEX_TEST,
     Route.REORDER_LIST,
+    Route.RECOMPOSITION_VISUALIZER,
     Route.SCRATCH,
     Route.SEGMENTED,
     Route.SHARED_ELEMENT,
@@ -242,6 +267,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.SUN_MOON,
     Route.SWIPE_CARD,
     Route.TAG_INPUT,
+    Route.TCP_VISUALIZER,
     Route.TETRIS,
     Route.TIMELINE,
     Route.TOUCH_INTERNALS,
