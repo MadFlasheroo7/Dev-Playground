@@ -158,13 +158,15 @@ internal class MpvMediaController : MediaController {
         scope.launch {
             val playPath = try {
                 if (url.contains("googlevideo.com")) {
-                    val f = File.createTempFile("dc-mpv-", ".media")
-                    tempFile?.delete(); tempFile = f
-                    ChunkedDownloader.download(url, f)
-                    f.absolutePath
+                    runCatching {
+                        val f = File.createTempFile("dc-mpv-", ".media")
+                        tempFile?.delete(); tempFile = f
+                        ChunkedDownloader.download(url, f)
+                        f.absolutePath
+                    }.getOrElse { url }
                 } else url
             } catch (e: Exception) {
-                _error.value = "Download failed: ${e.message}"; _buffering.value = false
+                _error.value = "Playback failed: ${e.message}"; _buffering.value = false
                 return@launch
             }
             send(buildJsonObject { putJsonArray("command") { add("loadfile"); add(playPath); add("replace") } }.toString())
@@ -177,6 +179,8 @@ internal class MpvMediaController : MediaController {
     override fun stop() = send(buildJsonObject { putJsonArray("command") { add("stop") } }.toString())
     override fun seekTo(ms: Long) =
         send(buildJsonObject { putJsonArray("command") { add("seek"); add(ms / 1000.0); add("absolute") } }.toString())
+    override fun setVolume(volume: Float) =
+        send(buildJsonObject { putJsonArray("command") { add("set_property"); add("volume"); add((volume * 100).toDouble()) } }.toString())
 
     override fun release() {
         scope.cancel()

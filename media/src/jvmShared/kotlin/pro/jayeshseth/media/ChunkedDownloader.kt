@@ -24,7 +24,7 @@ internal object ChunkedDownloader {
     private const val MAX_RETRIES = 7
     private const val PACE_MS = 120L // small gap between chunks so we don't burst into YouTube's rate limiter
     private const val USER_AGENT =
-        "Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0"
+        "Mozilla/5.0 (Linux; Android 10; Quest 3) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0.0 Mobile Safari/537.36"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

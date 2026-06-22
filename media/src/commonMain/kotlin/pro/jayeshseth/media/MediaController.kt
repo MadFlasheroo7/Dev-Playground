@@ -37,6 +37,8 @@ interface MediaController {
     fun resume()
     fun stop()
     fun seekTo(ms: Long)
+    /** Set playback volume, 0.0f to 1.0f. */
+    fun setVolume(volume: Float) {}
     /** Free the underlying player. Call from the UI's onDispose. */
     fun release()
 }

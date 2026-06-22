@@ -292,6 +292,7 @@ val labCategories: List<LabCategoryDef> = listOf(
     LabCategoryDef(
         "Audio Lab",
         listOf(
+        LabItem("Connected Audio Sync", Route.AUDIO_SYNC),
         LabItem("Binaural Beats", Route.BINAURAL_BEATS),
         LabItem("Drum Machine", Route.DRUM_MACHINE),
         LabItem("Theremin", Route.THEREMIN),

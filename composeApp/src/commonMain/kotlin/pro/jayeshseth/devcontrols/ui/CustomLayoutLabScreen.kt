@@ -29,7 +29,7 @@ import kotlin.math.sin
 
 private const val d = "$"
 
-enum class LayoutLabTab { PLAYGROUND, TRACE, CODE }
+enum class LayoutLabTab { PLAYGROUND, TRACE, CODE, GUIDE }
 enum class LayoutType { RADIAL, FLOW, STAGGERED, ADAPTIVE_FIT, VARIABLE_TAB }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,6 +111,7 @@ fun CustomLayoutLabScreen(onBack: () -> Unit) {
                                 LayoutLabTab.PLAYGROUND -> "Playground"
                                 LayoutLabTab.TRACE -> "Execution Trace"
                                 LayoutLabTab.CODE -> "Kotlin Code"
+                                LayoutLabTab.GUIDE -> "Educational Guide"
                             }
                             Text(label, fontWeight = FontWeight.Bold)
                         }
@@ -467,7 +468,77 @@ fun CustomLayoutLabScreen(onBack: () -> Unit) {
                         HighlightedCodeBlock(code = codeContent)
                     }
                 }
+                LayoutLabTab.GUIDE -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        GuideCard(
+                            title = "1. The 3 Phases of Compose Layout",
+                            content = "Jetpack Compose transforms state into UI in three steps:\n" +
+                                    "• Composition: What to show (runs Composable functions and builds the UI tree).\n" +
+                                    "• Layout: Where to show (measures children to determine sizes, then places them at specific x, y offsets).\n" +
+                                    "• Drawing: How to show (renders children pixels onto the canvas screen)."
+                        )
+                        GuideCard(
+                            title = "2. The Single-Pass Measurement Contract",
+                            content = "To maintain O(N) linear layout performance, Compose layouts measure children exactly once per pass. " +
+                                    "Measuring children twice with different constraints is illegal (throws an exception), unless using specific intrinsic measurements for estimation passes."
+                        )
+                        GuideCard(
+                            title = "3. Core API Breakdown",
+                            content = "• Constraints: Passes min/max bounds (width/height) down to children.\n" +
+                                    "• Measurable: Child handle waiting to be measured via measure(constraints).\n" +
+                                    "• Placeable: Measured child with resolved width/height ready to be placed via place(x, y).\n" +
+                                    "• MeasureScope: Context providing pixel conversions and the layout(w, h) placement builder."
+                        )
+                        GuideCard(
+                            title = "4. Standard Layout vs. SubcomposeLayout",
+                            content = "• Standard Layout: Pre-composed elements. Ideal for static arrangements like grids, circles, or wrapping flows.\n" +
+                                    "• SubcomposeLayout: Defer composition until the measurement pass. Enables composing children conditionally based on calculated sizes (e.g. Adaptive badge, variable-width indicator tab, or lazy viewport containers)."
+                        )
+                        GuideCard(
+                            title = "5. Building Custom Lazy Layouts",
+                            content = "Standard layouts compose everything. High-performance lazy layouts (like LazyColumn) only compose visible items.\n" +
+                                    "To build a custom lazy layout, use Compose's low-level LazyLayout API, implement a LazyLayoutItemProvider, track scroll offset, subcompose visible indices, and dispose of elements scrolling out of view."
+                        )
+                        GuideCard(
+                            title = "6. Limitations & Pitfalls",
+                            content = "• Double-measurement crashes: Never measure a child twice in standard layout.\n" +
+                                    "• Recomposition loops: Never update active mutable states (like scroll variables) inside measure/place blocks.\n" +
+                                    "• Subcompose Overhead: Deferring composition is expensive. Use standard Layout with offsets or drawing modifiers if subcomposition isn't strictly necessary."
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun GuideCard(title: String, content: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            Text(
+                text = content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp
+            )
         }
     }
 }

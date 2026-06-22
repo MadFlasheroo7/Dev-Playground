@@ -64,13 +64,15 @@ class DesktopMediaController : MediaController {
         scope.launch {
             val playPath = try {
                 if (url.contains("googlevideo.com")) {
-                    val f = java.io.File.createTempFile("dc-vlc-", ".media")
-                    tempFile?.delete(); tempFile = f
-                    ChunkedDownloader.download(url, f)
-                    f.absolutePath
+                    runCatching {
+                        val f = java.io.File.createTempFile("dc-vlc-", ".media")
+                        tempFile?.delete(); tempFile = f
+                        ChunkedDownloader.download(url, f)
+                        f.absolutePath
+                    }.getOrDefault(url)
                 } else url
             } catch (e: Exception) {
-                _error.value = "Download failed: ${e.message}"; _buffering.value = false; _wantPlaying = false
+                _error.value = "Playback failed: ${e.message}"; _buffering.value = false; _wantPlaying = false
                 return@launch
             }
             component?.mediaPlayer()?.media()?.play(playPath)
@@ -80,5 +82,6 @@ class DesktopMediaController : MediaController {
     override fun resume() { component?.mediaPlayer()?.controls()?.setPause(false) }
     override fun stop() { component?.mediaPlayer()?.controls()?.stop() }
     override fun seekTo(ms: Long) { component?.mediaPlayer()?.controls()?.setTime(ms) }
+    override fun setVolume(volume: Float) { component?.mediaPlayer()?.audio()?.setVolume((volume * 100).toInt()) }
     override fun release() { scope.cancel(); runCatching { tempFile?.delete() }; component?.release() }
 }

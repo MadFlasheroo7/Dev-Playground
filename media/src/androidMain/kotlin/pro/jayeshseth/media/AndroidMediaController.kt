@@ -5,6 +5,9 @@ import android.net.Uri
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,7 +29,19 @@ import androidx.media3.common.MediaItem as Media3Item
 @UnstableApi
 class AndroidMediaController(context: Context) : MediaController {
     private val appContext = context.applicationContext
-    private val player = ExoPlayer.Builder(appContext).build()
+    private val player = ExoPlayer.Builder(appContext)
+        .setMediaSourceFactory(
+            DefaultMediaSourceFactory(appContext)
+                .setDataSourceFactory(
+                    DefaultDataSource.Factory(
+                        appContext,
+                        DefaultHttpDataSource.Factory()
+                            .setUserAgent("Mozilla/5.0 (Linux; Android 10; Quest 3) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0.0 Mobile Safari/537.36")
+                            .setAllowCrossProtocolRedirects(true)
+                    )
+                )
+        )
+        .build()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     @Volatile private var tempFile: File? = null
 
@@ -85,13 +100,15 @@ class AndroidMediaController(context: Context) : MediaController {
         scope.launch {
             val uri = try {
                 if (url.contains("googlevideo.com")) {
-                    val f = File.createTempFile("dc-exo-", ".media", appContext.cacheDir)
-                    tempFile?.delete(); tempFile = f
-                    withContext(Dispatchers.IO) { ChunkedDownloader.download(url, f) }
-                    Uri.fromFile(f)
+                    runCatching {
+                        val f = File.createTempFile("dc-exo-", ".media", appContext.cacheDir)
+                        tempFile?.delete(); tempFile = f
+                        withContext(Dispatchers.IO) { ChunkedDownloader.download(url, f) }
+                        Uri.fromFile(f)
+                    }.getOrElse { Uri.parse(url) }
                 } else Uri.parse(url)
             } catch (e: Exception) {
-                _error.value = "Download failed: ${e.message}"; _buffering.value = false
+                _error.value = "Playback failed: ${e.message}"; _buffering.value = false
                 return@launch
             }
             player.setMediaItem(Media3Item.fromUri(uri)); player.prepare(); player.playWhenReady = true
@@ -102,6 +119,7 @@ class AndroidMediaController(context: Context) : MediaController {
     override fun resume() { player.playWhenReady = true }
     override fun stop() { player.stop() }
     override fun seekTo(ms: Long) { player.seekTo(ms) }
+    override fun setVolume(volume: Float) { player.volume = volume }
     override fun release() { scope.cancel(); runCatching { tempFile?.delete() }; player.release() }
 
     /** The underlying ExoPlayer, for an optional video surface (PlayerView) in the UI layer. */
