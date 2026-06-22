@@ -1,9 +1,5 @@
 package pro.jayeshseth.devcontrols.ui
 
-import android.media.AudioManager
-import android.media.ToneGenerator
-import android.os.VibrationEffect
-import android.os.VibratorManager
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -40,34 +36,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import pro.jayeshseth.devcontrols.platform.AudioPlayer
+import pro.jayeshseth.devcontrols.platform.rememberHapticPulse
+import kotlin.math.PI
+import kotlin.math.sin
 
-/** Metronome — BPM-timed click (ToneGenerator) + haptic pulse + visual flash. */
+/** Metronome — BPM-timed click (AudioPlayer) + haptic pulse + visual flash. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetronomeLabScreen(onBack: () -> Unit) {
-    val context = LocalContext.current
     var bpm by remember { mutableFloatStateOf(100f) }
     var playing by remember { mutableStateOf(false) }
     var beat by remember { mutableIntStateOf(0) }
+    val hapticPulse = rememberHapticPulse()
 
-    val tone = remember { runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 90) }.getOrNull() }
-    DisposableEffect(Unit) { onDispose { tone?.release() } }
-    val vibrator = remember {
-        (context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+    val clickBuf = remember {
+        val sr = 44100
+        val durationSamples = (0.04 * sr).toInt() // 40 ms
+        val buf = ShortArray(durationSamples)
+        for (i in 0 until durationSamples) {
+            val t = i.toDouble() / sr
+            val sine = sin(2.0 * PI * 1000.0 * t)
+            val env = (durationSamples - i).toDouble() / durationSamples
+            buf[i] = (sine * env * 0.3 * Short.MAX_VALUE).toInt().toShort()
+        }
+        buf
+    }
+
+    val player = remember { AudioPlayer(44100) }
+    DisposableEffect(Unit) {
+        onDispose {
+            player.release()
+        }
     }
 
     LaunchedEffect(playing, bpm) {
         if (!playing) return@LaunchedEffect
-        while (true) {
-            beat++
-            tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
-            runCatching { vibrator?.vibrate(VibrationEffect.createOneShot(25, VibrationEffect.DEFAULT_AMPLITUDE)) }
-            delay((60_000f / bpm).toLong())
+        player.start()
+        try {
+            while (true) {
+                beat++
+                player.write(clickBuf, 0, clickBuf.size)
+                hapticPulse()
+                delay((60_000f / bpm).toLong())
+            }
+        } finally {
+            player.stop()
         }
     }
 

@@ -106,6 +106,32 @@ actual fun rememberToaster(): (String) -> Unit {
 }
 
 @Composable
+actual fun rememberHapticPulse(): () -> Unit {
+    val ctx = LocalContext.current
+    val vibrator = remember {
+        (ctx.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager)?.defaultVibrator
+    }
+    return remember {
+        {
+            runCatching {
+                vibrator?.vibrate(android.os.VibrationEffect.createOneShot(25, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        }
+    }
+}
+
+@Composable
+actual fun MicrophonePermissionGate(rationale: String, content: @Composable () -> Unit) {
+    pro.jayeshseth.devcontrols.ui.PermGate(
+        permission = android.Manifest.permission.RECORD_AUDIO,
+        rationale = rationale,
+        content = content
+    )
+}
+
+
+
+@Composable
 actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) {
         Box(modifier) { fallback() }; return

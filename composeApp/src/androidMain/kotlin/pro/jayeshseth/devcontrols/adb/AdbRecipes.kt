@@ -105,6 +105,7 @@ object AdbRecipes {
                 pm grant pro.jayeshseth.devcontrols android.permission.WRITE_SECURE_SETTINGS &&
                 pm grant pro.jayeshseth.devcontrols android.permission.READ_PHONE_STATE &&
                 pm grant pro.jayeshseth.devcontrols android.permission.ANSWER_PHONE_CALLS &&
+                pm grant pro.jayeshseth.devcontrols android.permission.WATCH_APPOPS &&
                 appops set pro.jayeshseth.devcontrols WRITE_SETTINGS allow &&
                 appops set pro.jayeshseth.devcontrols GET_USAGE_STATS allow &&
                 appops set pro.jayeshseth.devcontrols ACCESS_RESTRICTED_SETTINGS allow &&

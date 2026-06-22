@@ -1,0 +1,10 @@
+Line 1: Verification Test
+Line 2: Workspace rule validation
+Line 3: Explicit write confirmation enabled
+Line 4: Asking for user permission before edits
+Line 5: File: test_write.txt
+Line 6: Directory: AndroidStudioProjects/Testdel
+Line 7: System is configured correctly
+Line 8: Rules loaded from AGENTS.md
+Line 9: Testing interactive multiple-choice prompt
+Line 10: Complete validation successful

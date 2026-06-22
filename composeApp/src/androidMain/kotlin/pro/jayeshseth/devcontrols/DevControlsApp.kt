@@ -6,8 +6,13 @@ import org.conscrypt.Conscrypt
 import pro.jayeshseth.devcontrols.call.CallNotifications
 import pro.jayeshseth.devcontrols.data.AdbEndpointDiscoverer
 import pro.jayeshseth.devcontrols.data.DevSettingsRepository
+import pro.jayeshseth.devcontrols.data.PrivacyGlowPrefs
 import pro.jayeshseth.devcontrols.kiosk.KioskNotification
+import pro.jayeshseth.devcontrols.service.PrivacyGlowService
 import pro.jayeshseth.devcontrols.widget.WidgetRefresher
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.security.Security
 
 /**
@@ -28,5 +33,18 @@ class DevControlsApp : Application() {
         DevSettingsRepository.get(this).registerWidgetRefresh()
         AdbEndpointDiscoverer.get(this).start()
         WidgetRefresher(this).start()
+
+        // Auto-start Privacy Glow HUD if enabled
+        MainScope().launch {
+            val prefs = PrivacyGlowPrefs.get(this@DevControlsApp)
+            if (prefs.hudEnabled.first() && android.provider.Settings.canDrawOverlays(this@DevControlsApp)) {
+                val intent = android.content.Intent(this@DevControlsApp, PrivacyGlowService::class.java)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+            }
+        }
     }
 }

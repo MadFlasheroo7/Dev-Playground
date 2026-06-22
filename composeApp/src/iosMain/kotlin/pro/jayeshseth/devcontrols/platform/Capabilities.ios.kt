@@ -25,6 +25,16 @@ actual fun rememberDeckExporter(): DeckExporter? = null
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
 
+@Composable
+actual fun rememberHapticPulse(): () -> Unit = remember { {} }
+
+@Composable
+actual fun MicrophonePermissionGate(rationale: String, content: @Composable () -> Unit) {
+    content()
+}
+
+
+
 // TODO (Mac): UIWindowScene fullscreen / orientation lock.
 @Composable
 actual fun PresentationMode() { /* no-op until iOS app shell exists */ }

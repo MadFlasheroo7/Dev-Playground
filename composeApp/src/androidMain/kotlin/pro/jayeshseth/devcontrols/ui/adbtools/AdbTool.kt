@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -132,7 +133,16 @@ fun AdbToolScaffold(
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = {
+            SnackbarHost(snackbar) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Color(0xFF323232),
+                    contentColor = Color.White,
+                    actionColor = Color(0xFF8C9CFF)
+                )
+            }
+        },
         modifier = Modifier.fillMaxSize()
     ) { inner ->
         val base = Modifier.padding(inner).fillMaxSize().padding(horizontal = 12.dp)

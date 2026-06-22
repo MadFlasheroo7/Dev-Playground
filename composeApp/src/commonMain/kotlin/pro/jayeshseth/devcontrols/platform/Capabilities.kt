@@ -33,6 +33,11 @@ expect fun rememberDeckExporter(): DeckExporter?
 @Composable
 expect fun rememberToaster(): (String) -> Unit
 
+/** Triggers a short haptic vibration pulse (Android: vibrator click, Desktop: no-op). */
+@Composable
+expect fun rememberHapticPulse(): () -> Unit
+
+
 /**
  * While composed, puts the host into presentation mode — fullscreen + landscape — and restores the
  * previous state on exit. Android: immersive (hidden system bars) + sensor-landscape. Desktop:
@@ -40,6 +45,11 @@ expect fun rememberToaster(): (String) -> Unit
  */
 @Composable
 expect fun PresentationMode()
+
+/** Gathers permission (Android: RECORD_AUDIO; Desktop: directly runs content). */
+@Composable
+expect fun MicrophonePermissionGate(rationale: String, content: @Composable () -> Unit)
+
 
 /**
  * Renders an animated SkSL/AGSL shader as a fill in [modifier]'s area. The [source] must declare

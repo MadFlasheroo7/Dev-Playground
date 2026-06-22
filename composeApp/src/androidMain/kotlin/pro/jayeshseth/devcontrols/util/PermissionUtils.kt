@@ -28,4 +28,10 @@ object PermissionUtils {
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         } else true
+
+    fun hasWatchAppOps(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            "android.permission.WATCH_APPOPS"
+        ) == PackageManager.PERMISSION_GRANTED
 }

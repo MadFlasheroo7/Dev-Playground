@@ -32,6 +32,16 @@ actual fun rememberDeckExporter(): DeckExporter? = null
 @Composable
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
 
+@Composable
+actual fun rememberHapticPulse(): () -> Unit = remember { {} }
+
+@Composable
+actual fun MicrophonePermissionGate(rationale: String, content: @Composable () -> Unit) {
+    content()
+}
+
+
+
 // Enter browser fullscreen while the deck is presenting; restore on exit. (Fullscreen needs a recent
 // user gesture — entering present mode from a tap provides it.)
 @Composable

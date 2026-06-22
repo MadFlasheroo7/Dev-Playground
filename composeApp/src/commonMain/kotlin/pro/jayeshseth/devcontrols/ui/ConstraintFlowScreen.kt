@@ -9,15 +9,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.drawText
 
 enum class ModifierType {
     FILL_MAX_SIZE,
@@ -214,7 +215,7 @@ fun ConstraintFlowScreen(onBack: () -> Unit) {
                         measuredSize = childMeasuredSize,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(350.dp)
+                            .height(380.dp)
                     )
                     
                     Spacer(modifier = Modifier.height(8.dp))
@@ -398,131 +399,116 @@ fun FlowCanvas(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF151518)),
         border = BorderStroke(1.dp, Color(0xFF26262D))
     ) {
-        Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-            
-            // Draw nodes along vertical flow line
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.TopCenter
+        ) {
             val stepCount = steps.size
-            val nodeHeight = 44f
-            val nodeWidth = 240f
-            
-            val totalSteps = stepCount + 2 // Parent node + steps + Child Node
-            val spacing = (canvasHeight - totalSteps * nodeHeight) / (totalSteps - 1)
-            
-            // Draw background flow pipe
-            drawLine(
-                color = Color(0xFF2D2D35),
-                start = Offset(canvasWidth / 2f, 20f),
-                end = Offset(canvasWidth / 2f, canvasHeight - 20f),
-                strokeWidth = 6f
-            )
-            
-            // Draw arrows Down (Left side) and Up (Right side)
-            // Left arrows: constraints traveling down (blue)
-            // Right arrows: sizes traveling up (green)
-            for (i in 0 until totalSteps - 1) {
-                val startY = 20f + i * (nodeHeight + spacing) + nodeHeight
-                val endY = startY + spacing
-                
-                // Constraints Down (Blue Arrow)
-                drawLine(
-                    color = Color(0xFF3B82F6),
-                    start = Offset(canvasWidth / 2f - 140f, startY + 5f),
-                    end = Offset(canvasWidth / 2f - 140f, endY - 10f),
-                    strokeWidth = 3f
-                )
-                drawCircle(
-                    color = Color(0xFF3B82F6),
-                    radius = 4f,
-                    center = Offset(canvasWidth / 2f - 140f, endY - 10f)
-                )
-                
-                // Sizes Up (Green Arrow)
-                drawLine(
-                    color = Color(0xFF10B981),
-                    start = Offset(canvasWidth / 2f + 140f, endY - 5f),
-                    end = Offset(canvasWidth / 2f + 140f, startY + 10f),
-                    strokeWidth = 3f
-                )
-                drawCircle(
-                    color = Color(0xFF10B981),
-                    radius = 4f,
-                    center = Offset(canvasWidth / 2f + 140f, startY + 10f)
-                )
-            }
-            
-            // 1. Draw Parent node
-            val parentY = 20f
-            val nodeX = (canvasWidth - nodeWidth) / 2f
-            drawRoundRect(
-                color = Color(0xFF374151),
-                topLeft = Offset(nodeX, parentY),
-                size = androidx.compose.ui.geometry.Size(nodeWidth, nodeHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
-            )
-            
-            // 2. Draw Modifier Nodes
-            steps.forEachIndexed { index, pair ->
-                val nodeY = parentY + (index + 1) * (nodeHeight + spacing)
-                val isLast = index == stepCount - 1
-                
-                drawRoundRect(
-                    color = Color(0xFF1E1E24),
-                    topLeft = Offset(nodeX, nodeY),
-                    size = androidx.compose.ui.geometry.Size(nodeWidth, nodeHeight),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
-                    style = Stroke(width = 2f)
-                )
-                drawRoundRect(
-                    color = Color(0xFF2563EB).copy(alpha = 0.1f),
-                    topLeft = Offset(nodeX, nodeY),
-                    size = androidx.compose.ui.geometry.Size(nodeWidth, nodeHeight),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
-                )
-            }
-            
-            // 3. Draw Child Node
-            val childY = parentY + (stepCount + 1) * (nodeHeight + spacing)
-            drawRoundRect(
-                color = Color(0xFF1F2937),
-                topLeft = Offset(nodeX, childY),
-                size = androidx.compose.ui.geometry.Size(nodeWidth, nodeHeight),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f)
-            )
-        }
-        
-        // Render labels on top of Canvas using a simple overlay
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            val stepCount = steps.size
+            val totalSteps = stepCount + 2
+            val density = LocalDensity.current
             
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .drawBehind {
+                        val nodeHeightPx = with(density) { 56.dp.toPx() }
+                        val spacingPx = with(density) { 32.dp.toPx() }
+                        val centerX = size.width / 2f
+                        
+                        val startY = nodeHeightPx / 2f
+                        val endY = size.height - (nodeHeightPx / 2f)
+                        
+                        // Draw central pipe
+                        drawLine(
+                            color = Color(0xFF2D2D35),
+                            start = Offset(centerX, startY),
+                            end = Offset(centerX, endY),
+                            strokeWidth = 6f
+                        )
+                        
+                        // Draw arrow connectors in the gaps between nodes
+                        for (i in 0 until totalSteps - 1) {
+                            val gapStartY = (i + 1) * nodeHeightPx + i * spacingPx
+                            val gapEndY = gapStartY + spacingPx
+                            
+                            // Left arrow (Constraints Down - Blue)
+                            val leftX = centerX - 130f
+                            drawLine(
+                                color = Color(0xFF3B82F6),
+                                start = Offset(leftX, gapStartY + 4f),
+                                end = Offset(leftX, gapEndY - 8f),
+                                strokeWidth = 3f
+                            )
+                            // Arrowhead (down)
+                            drawLine(
+                                color = Color(0xFF3B82F6),
+                                start = Offset(leftX - 6f, gapEndY - 14f),
+                                end = Offset(leftX, gapEndY - 8f),
+                                strokeWidth = 3f
+                            )
+                            drawLine(
+                                color = Color(0xFF3B82F6),
+                                start = Offset(leftX + 6f, gapEndY - 14f),
+                                end = Offset(leftX, gapEndY - 8f),
+                                strokeWidth = 3f
+                            )
+                            
+                            // Right arrow (Sizes Up - Green)
+                            val rightX = centerX + 130f
+                            drawLine(
+                                color = Color(0xFF10B981),
+                                start = Offset(rightX, gapEndY - 4f),
+                                end = Offset(rightX, gapStartY + 8f),
+                                strokeWidth = 3f
+                            )
+                            // Arrowhead (up)
+                            drawLine(
+                                color = Color(0xFF10B981),
+                                start = Offset(rightX - 6f, gapStartY + 14f),
+                                end = Offset(rightX, gapStartY + 8f),
+                                strokeWidth = 3f
+                            )
+                            drawLine(
+                                color = Color(0xFF10B981),
+                                start = Offset(rightX + 6f, gapStartY + 14f),
+                                end = Offset(rightX, gapStartY + 8f),
+                                strokeWidth = 3f
+                            )
+                        }
+                    },
+                verticalArrangement = Arrangement.spacedBy(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Parent Node info
-                NodeText(
+                // 1. Parent Node
+                NodeCard(
                     title = "Parent Component",
                     subtitle = "Sends: $parentConstraints",
-                    color = Color.LightGray
+                    titleColor = Color.LightGray,
+                    bgColor = Color(0xFF374151)
                 )
                 
-                // Modifier steps
+                // 2. Modifier steps
                 steps.forEach { step ->
-                    NodeText(
+                    NodeCard(
                         title = getModifierLabel(step.first),
                         subtitle = "Received: ${step.second.first}\nPasses: ${step.second.second}",
-                        color = Color(0xFF60A5FA)
+                        titleColor = Color(0xFF60A5FA),
+                        bgColor = Color(0xFF2563EB).copy(alpha = 0.1f),
+                        borderColor = Color(0xFF2D2D35)
                     )
                 }
                 
-                // Child Node info
+                // 3. Child Node
                 val finalConstraints = steps.lastOrNull()?.second?.second ?: parentConstraints
-                NodeText(
+                NodeCard(
                     title = "Child Component (Wants 150x150)",
                     subtitle = "Fits to: $finalConstraints\nReturns size: ${measuredSize.x.toInt()} x ${measuredSize.y.toInt()}",
-                    color = Color(0xFF34D399)
+                    titleColor = Color(0xFF34D399),
+                    bgColor = Color(0xFF1F2937)
                 )
             }
         }
@@ -530,28 +516,39 @@ fun FlowCanvas(
 }
 
 @Composable
-fun NodeText(title: String, subtitle: String, color: Color) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+fun NodeCard(
+    title: String,
+    subtitle: String,
+    titleColor: Color,
+    bgColor: Color,
+    borderColor: Color = Color.Transparent
+) {
+    Box(
         modifier = Modifier
-            .width(230.dp)
-            .padding(vertical = 4.dp)
+            .size(width = 240.dp, height = 56.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .border(1.5.dp, borderColor, RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = title,
-            color = color,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
-        )
-        Text(
-            text = subtitle,
-            color = Color.Gray,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            lineHeight = 11.sp,
-            maxLines = 2
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = title,
+                color = titleColor,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                text = subtitle,
+                color = Color.Gray,
+                fontSize = 9.sp,
+                fontFamily = FontFamily.Monospace,
+                lineHeight = 11.sp,
+                maxLines = 2
+            )
+        }
     }
 }
 

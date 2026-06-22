@@ -1,9 +1,5 @@
 package pro.jayeshseth.devcontrols.ui.audiolab
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioTrack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -36,12 +32,13 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.math.PI
 import kotlin.math.sin
 
 private class ThereminState { @Volatile var freq = 0.0; @Volatile var amp = 0.0 }
 
-/** Theremin — slide your finger: X controls pitch, Y controls volume (continuous AudioTrack sine). */
+/** Theremin — slide your finger: X controls pitch, Y controls volume (continuous AudioPlayer sine). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThereminScreen(onBack: () -> Unit) {
@@ -52,13 +49,8 @@ fun ThereminScreen(onBack: () -> Unit) {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         scope.launch {
             val sr = 44100
-            val minBuf = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            val track = AudioTrack(
-                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build(),
-                AudioFormat.Builder().setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).setEncoding(AudioFormat.ENCODING_PCM_16BIT).build(),
-                maxOf(minBuf, 2048), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE
-            )
-            track.play()
+            val player = AudioPlayer(sr)
+            player.start()
             val n = 256; val buf = ShortArray(n); var phase = 0.0; var curAmp = 0.0
             try {
                 while (isActive) {
@@ -68,9 +60,12 @@ fun ThereminScreen(onBack: () -> Unit) {
                         buf[i] = (s * Short.MAX_VALUE).toInt().toShort()
                         if (state.freq > 0) { phase += 2 * PI * state.freq / sr; if (phase > 2 * PI) phase -= 2 * PI }
                     }
-                    track.write(buf, 0, n)
+                    player.write(buf, 0, n)
                 }
-            } finally { runCatching { track.stop(); track.release() } }
+            } finally {
+                runCatching { player.stop() }
+                runCatching { player.release() }
+            }
         }
         onDispose { scope.cancel() }
     }

@@ -66,6 +66,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.JWT_DECODE -> pro.jayeshseth.devcontrols.ui.devtools.JwtDecoderScreen(onBack = onBack)
         Route.KALEIDOSCOPE -> pro.jayeshseth.devcontrols.ui.KaleidoscopeLabScreen(onBack = onBack)
         Route.KANBAN -> pro.jayeshseth.devcontrols.ui.KanbanLabScreen(onBack = onBack)
+        Route.KTOR_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.KtorPlaygroundScreen(onBack = onBack)
         Route.LAZY_LIFECYCLE -> pro.jayeshseth.devcontrols.ui.LazyLifecycleScreen(onBack = onBack)
         Route.LIGHTNING -> pro.jayeshseth.devcontrols.ui.LightningLabScreen(onBack = onBack)
         Route.LIQUID_SWIPE -> pro.jayeshseth.devcontrols.ui.visualfx.LiquidSwipeScreen(onBack = onBack)
@@ -73,6 +74,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.MANDALA -> pro.jayeshseth.devcontrols.ui.MandalaPadLabScreen(onBack = onBack)
         Route.MARBLE_RUN -> pro.jayeshseth.devcontrols.ui.MarbleRunLabScreen(onBack = onBack)
         Route.MARCHING_SQUARES -> pro.jayeshseth.devcontrols.ui.MarchingSquaresLabScreen(onBack = onBack)
+        Route.MARKDOWN_PARSER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.MarkdownParserPlaygroundScreen(onBack = onBack)
         Route.MAZE -> pro.jayeshseth.devcontrols.ui.MazeLabScreen(onBack = onBack)
         Route.MEDIA_STREAM -> pro.jayeshseth.devcontrols.ui.MediaStreamScreen(onBack = onBack)
         Route.MEMORY_MATCH -> pro.jayeshseth.devcontrols.ui.MemoryMatchScreen(onBack = onBack)
@@ -89,6 +91,9 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.PAGE_CURL -> pro.jayeshseth.devcontrols.ui.PageCurlLabScreen(onBack = onBack)
         Route.PARALLAX_HEADER -> pro.jayeshseth.devcontrols.ui.ParallaxHeaderLabScreen(onBack = onBack)
         Route.PARTICLES -> pro.jayeshseth.devcontrols.ui.ParticleLabScreen(onBack = onBack)
+        Route.PARTICLE_TEXT -> pro.jayeshseth.devcontrols.ui.visualfx.ParticleTextScreen(onBack = onBack)
+        Route.PARTICLE_VECTOR -> pro.jayeshseth.devcontrols.ui.visualfx.ParticleVectorScreen(onBack = onBack)
+        Route.PNG_VECTORIZER -> pro.jayeshseth.devcontrols.ui.PngVectorizerLabScreen(onBack = onBack)
         Route.PATHFINDING -> pro.jayeshseth.devcontrols.ui.PathfindingLabScreen(onBack = onBack)
         Route.PATH_MORPH -> pro.jayeshseth.devcontrols.ui.PathMorphLabScreen(onBack = onBack)
         Route.PATH_PLAYER -> pro.jayeshseth.devcontrols.ui.PathKeyframePlayerScreen(onBack = onBack)
@@ -125,6 +130,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.STEPPER -> pro.jayeshseth.devcontrols.ui.StepperWizardLabScreen(onBack = onBack)
         Route.STOPWATCH -> pro.jayeshseth.devcontrols.ui.timedate.StopwatchScreen(onBack = onBack)
         Route.SUN_MOON -> pro.jayeshseth.devcontrols.ui.maps.SunMoonScreen(onBack = onBack)
+        Route.SVG_COMPILER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.SvgCompilerPlaygroundScreen(onBack = onBack)
         Route.SWIPE_CARD -> pro.jayeshseth.devcontrols.ui.SwipeCardLabScreen(onBack = onBack)
         Route.TAG_INPUT -> pro.jayeshseth.devcontrols.ui.TagInputLabScreen(onBack = onBack)
         Route.TCP_VISUALIZER -> pro.jayeshseth.devcontrols.ui.TcpVisualizerScreen(onBack = onBack)
@@ -142,10 +148,18 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.WINDOW_SIZE -> pro.jayeshseth.devcontrols.ui.WindowSizeLabScreen(onBack = onBack)
         Route.WIREFRAME -> pro.jayeshseth.devcontrols.ui.WireframeLabScreen(onBack = onBack)
         Route.WORLD_CLOCK -> pro.jayeshseth.devcontrols.ui.timedate.WorldClockScreen(onBack = onBack)
+        Route.TONE_GEN -> pro.jayeshseth.devcontrols.ui.audiolab.ToneGeneratorScreen(onBack = onBack)
+        Route.THEREMIN -> pro.jayeshseth.devcontrols.ui.audiolab.ThereminScreen(onBack = onBack)
+        Route.SYNTH -> pro.jayeshseth.devcontrols.ui.SynthKeyboardLabScreen(onBack = onBack)
+        Route.METRONOME -> pro.jayeshseth.devcontrols.ui.MetronomeLabScreen(onBack = onBack)
+        Route.DRUM_MACHINE -> pro.jayeshseth.devcontrols.ui.audiolab.DrumMachineScreen(onBack = onBack)
+        Route.CLAP_WHISTLE -> pro.jayeshseth.devcontrols.ui.audiolab.ClapWhistleScreen(onBack = onBack)
+        Route.BINAURAL_BEATS -> pro.jayeshseth.devcontrols.ui.audiolab.BinauralBeatsScreen(onBack = onBack)
         else -> return false
     }
     return true
 }
+
 
 /** Routes available in commonMain - used by the desktop/web default home. */
 val commonRoutes: Set<Route> = setOf(
@@ -206,6 +220,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.JWT_DECODE,
     Route.KALEIDOSCOPE,
     Route.KANBAN,
+    Route.KTOR_PLAYGROUND,
     Route.LAZY_LIFECYCLE,
     Route.LIGHTNING,
     Route.LIQUID_SWIPE,
@@ -213,6 +228,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.MANDALA,
     Route.MARBLE_RUN,
     Route.MARCHING_SQUARES,
+    Route.MARKDOWN_PARSER_PLAYGROUND,
     Route.MAZE,
     Route.MEDIA_STREAM,
     Route.MEMORY_MATCH,
@@ -229,6 +245,9 @@ val commonRoutes: Set<Route> = setOf(
     Route.PAGE_CURL,
     Route.PARALLAX_HEADER,
     Route.PARTICLES,
+    Route.PARTICLE_TEXT,
+    Route.PARTICLE_VECTOR,
+    Route.PNG_VECTORIZER,
     Route.PATHFINDING,
     Route.PATH_MORPH,
     Route.PATH_PLAYER,
@@ -265,6 +284,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.STEPPER,
     Route.STOPWATCH,
     Route.SUN_MOON,
+    Route.SVG_COMPILER_PLAYGROUND,
     Route.SWIPE_CARD,
     Route.TAG_INPUT,
     Route.TCP_VISUALIZER,
@@ -282,4 +302,12 @@ val commonRoutes: Set<Route> = setOf(
     Route.WINDOW_SIZE,
     Route.WIREFRAME,
     Route.WORLD_CLOCK,
+    Route.TONE_GEN,
+    Route.THEREMIN,
+    Route.SYNTH,
+    Route.METRONOME,
+    Route.DRUM_MACHINE,
+    Route.CLAP_WHISTLE,
+    Route.BINAURAL_BEATS,
 )
+

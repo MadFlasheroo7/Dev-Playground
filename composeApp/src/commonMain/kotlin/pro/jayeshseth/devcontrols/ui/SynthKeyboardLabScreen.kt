@@ -1,9 +1,5 @@
 package pro.jayeshseth.devcontrols.ui
 
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioTrack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -36,22 +32,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.PI
 import kotlin.math.sin
 
 private class SynthState {
     @Volatile var freq: Double = 0.0
-    @Volatile var wave: Int = 0   // 0 sine, 1 square, 2 saw
+    @Volatile var wave: Int = 0
 }
 
-/** Synth keyboard — generates tones live with [AudioTrack]; pick the waveform, hold keys. */
+/** Synth keyboard — generates tones live with [AudioPlayer]; pick the waveform, hold keys. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SynthKeyboardLabScreen(onBack: () -> Unit) {
@@ -62,15 +59,8 @@ fun SynthKeyboardLabScreen(onBack: () -> Unit) {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         scope.launch {
             val sr = 44100
-            val minBuf = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            val track = AudioTrack(
-                AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build(),
-                AudioFormat.Builder().setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT).build(),
-                maxOf(minBuf, 2048), AudioTrack.MODE_STREAM, AudioManager.AUDIO_SESSION_ID_GENERATE
-            )
-            track.play()
+            val player = AudioPlayer(sr)
+            player.start()
             val n = 512
             val buf = ShortArray(n)
             var phase = 0.0
@@ -86,11 +76,12 @@ fun SynthKeyboardLabScreen(onBack: () -> Unit) {
                         buf[i] = (s * 0.28 * Short.MAX_VALUE).toInt().toShort()
                         if (f > 0.0) { phase += 2 * PI * f / sr; if (phase > 2 * PI) phase -= 2 * PI }
                     }
-                    track.write(buf, 0, n)
+                    player.write(buf, 0, n)
                 }
             } catch (_: CancellationException) {
             } finally {
-                runCatching { track.stop() }; runCatching { track.release() }
+                runCatching { player.stop() }
+                runCatching { player.release() }
             }
         }
         onDispose { scope.cancel() }

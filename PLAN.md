@@ -155,6 +155,21 @@ Camera Filter, Social Share.
 
 ---
 
+## Status: Batch 7 Ready - New Creative Tool Proposals
+Added 6 new high-power concepts focusing on Accessibility, AppOps, AGSL, and ADB.
+
+---
+
+## Creative Power-Tools (Batch CP)
+1. **UI-to-Code Scraper (Accessibility)** — Scrape `AccessibilityNodeInfo` tree from other apps and "clone" them into Compose code or JSON layouts.
+2. **System-Wide Privacy Glow (AppOps)** — Real-time AGSL shader glow around screen edges when Mic/Camera/Location is accessed by any app.
+3. **Haptic Synth (Audio-to-Vibration)** — Map audio frequencies/FFT to high-fidelity haptic primitives (`VibrationEffect`).
+4. **Self-ADB God Mode Terminal** — Local terminal authenticated via wireless ADB for `pm`, `am`, and `settings` macros.
+5. **Retro OS Shader Overlay** — `SYSTEM_ALERT_WINDOW` applying CRT/VHS/GameBoy shaders over the entire OS.
+6. **Attestation Lab (Security)** — Hardware-backed key attestation inspector comparing local TEE state vs Play Integrity API.
+
+---
+
 ## Recommended ordering (suggested)
 Quick visual wins first, then heavier engines:
 1. **DM** Device & Media (torch, FFT, tuner, sensors dashboard, QR scanner) — high utility

@@ -96,6 +96,16 @@ actual fun rememberDeckExporter(): DeckExporter? = remember {
 actual fun rememberToaster(): (String) -> Unit = remember { { msg: String -> println("[DevControls] $msg") } }
 
 @Composable
+actual fun rememberHapticPulse(): () -> Unit = remember { {} }
+
+@Composable
+actual fun MicrophonePermissionGate(rationale: String, content: @Composable () -> Unit) {
+    content()
+}
+
+
+
+@Composable
 actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
     val effect = remember(source) {
         runCatching { org.jetbrains.skia.RuntimeEffect.makeForShader(source) }.getOrNull()

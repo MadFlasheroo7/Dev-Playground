@@ -12,8 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +32,7 @@ import pro.jayeshseth.devcontrols.nav.labCategories
  * The shared categorized home menu: collapsible categories of labelled routes ([labCategories]).
  * [isEnabled] filters which routes are tappable on a platform (Android = all; desktop/web hide
  * routes that aren't available there). Categories with no enabled items are omitted.
+ * Includes a real-time search field at the top.
  */
 @Composable
 fun CategoryMenu(
@@ -34,28 +40,100 @@ fun CategoryMenu(
     onNavigate: (Route) -> Unit,
     isEnabled: (Route) -> Boolean = { true },
 ) {
-    labCategories.forEach { cat ->
-        val items = cat.items.filter { isEnabled(it.route) }
-        if (items.isEmpty()) return@forEach
-        val open = expandedCats[cat.title] ?: false
-        Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-            Row(
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { expandedCats[cat.title] = !open }
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(cat.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                Text(if (open) "▾" else "▸", style = MaterialTheme.typography.titleMedium)
+    var searchQuery by remember { mutableStateOf("") }
+
+    Column(Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            placeholder = { Text("Search features...") },
+            singleLine = true,
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    Text(
+                        text = "✕",
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clickable { searchQuery = "" },
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-            if (open) {
-                Spacer(Modifier.height(6.dp))
-                items.forEach { item ->
-                    Button(onClick = { onNavigate(item.route) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                        Text(item.label)
+        )
+
+        val query = searchQuery.trim()
+
+        if (query.isEmpty()) {
+            labCategories.forEach { cat ->
+                val items = cat.items.filter { isEnabled(it.route) }
+                if (items.isEmpty()) return@forEach
+                val open = expandedCats[cat.title] ?: false
+                Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { expandedCats[cat.title] = !open }
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(cat.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(if (open) "▾" else "▸", style = MaterialTheme.typography.titleMedium)
+                    }
+                    if (open) {
+                        Spacer(Modifier.height(6.dp))
+                        items.forEach { item ->
+                            Button(onClick = { onNavigate(item.route) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Text(item.label)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            val matchedItems = mutableListOf<Pair<String, pro.jayeshseth.devcontrols.nav.LabItem>>()
+            labCategories.forEach { cat ->
+                cat.items.forEach { item ->
+                    if (isEnabled(item.route)) {
+                        val matchesLabel = item.label.contains(query, ignoreCase = true)
+                        val matchesCategory = cat.title.contains(query, ignoreCase = true)
+                        if (matchesLabel || matchesCategory) {
+                            matchedItems.add(cat.title to item)
+                        }
+                    }
+                }
+            }
+
+            if (matchedItems.isEmpty()) {
+                Text(
+                    text = "No matching features found.",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                matchedItems.forEach { (catTitle, item) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onNavigate(item.route) }
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(item.label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                            Text(catTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text("➔", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }

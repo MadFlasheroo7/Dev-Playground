@@ -2,6 +2,7 @@ package pro.jayeshseth.devcontrols
 
 import pro.jayeshseth.devcontrols.nav.Route
 import pro.jayeshseth.devcontrols.ui.CategoryMenu
+import pro.jayeshseth.devcontrols.ui.PrivacyGlowScreen
 
 import android.Manifest
 import android.appwidget.AppWidgetManager
@@ -82,6 +83,9 @@ import pro.jayeshseth.devcontrols.ui.ComposePhasesScreen
 import pro.jayeshseth.devcontrols.ui.ConstraintFlowScreen
 import pro.jayeshseth.devcontrols.ui.LazyLifecycleScreen
 import pro.jayeshseth.devcontrols.ui.HtmlParserPlaygroundScreen
+import pro.jayeshseth.devcontrols.ui.MarkdownParserPlaygroundScreen
+import pro.jayeshseth.devcontrols.ui.SvgCompilerPlaygroundScreen
+import pro.jayeshseth.devcontrols.ui.KtorPlaygroundScreen
 import pro.jayeshseth.devcontrols.ui.DisplayLabScreen
 import pro.jayeshseth.devcontrols.ui.GestureLabScreen
 import pro.jayeshseth.devcontrols.ui.AudioReactiveLabScreen
@@ -189,7 +193,7 @@ import pro.jayeshseth.devcontrols.ui.TtsSttLabScreen
 import pro.jayeshseth.devcontrols.ui.NfcReaderLabScreen
 import pro.jayeshseth.devcontrols.ui.MediaVisualizerLabScreen
 import pro.jayeshseth.devcontrols.ui.FbmNoiseLabScreen
-import pro.jayeshseth.devcontrols.ui.MetaballsLabScreen
+import pro.jayeshseth.devcontrols.ui.visualfx.LiquidMetalSandboxScreen
 import pro.jayeshseth.devcontrols.ui.TruchetLabScreen
 import pro.jayeshseth.devcontrols.ui.GlitchLabScreen
 import pro.jayeshseth.devcontrols.ui.EdgeDetectLabScreen
@@ -265,7 +269,6 @@ import pro.jayeshseth.devcontrols.ui.camera.DocScannerScreen
 import pro.jayeshseth.devcontrols.ui.camera.CameraGalleryScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.DynamicIslandScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.LiquidSwipeScreen
-import pro.jayeshseth.devcontrols.ui.visualfx.ParticleTextScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.MorphingIconsScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.GooeyNavBarScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.MorphingSheetScreen
@@ -278,6 +281,7 @@ import pro.jayeshseth.devcontrols.ui.visualfx.AuroraScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.CausticsScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.SoapBubbleScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.CrtScreen
+import pro.jayeshseth.devcontrols.ui.visualfx.RainyWindowScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.PixelateScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.HeatHazeScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.BlackHoleScreen
@@ -289,6 +293,7 @@ import pro.jayeshseth.devcontrols.ui.visualfx.InkSpreadScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.VoronoiShatterScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.SmokeFluidScreen
 import pro.jayeshseth.devcontrols.ui.visualfx.SpeedometerScreen
+import pro.jayeshseth.devcontrols.ui.visualfx.ParticleVectorScreen
 import pro.jayeshseth.devcontrols.ui.privacy.FingerprintAuditorScreen
 import pro.jayeshseth.devcontrols.ui.privacy.HashingScreen
 import pro.jayeshseth.devcontrols.ui.privacy.CryptoPlaygroundScreen
@@ -470,9 +475,8 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.WIREFRAME -> WireframeLabScreen(onBack = onBack)
         Route.GLOBE -> PointCloudGlobeLabScreen(onBack = onBack)
         Route.STARFIELD -> StarfieldLabScreen(onBack = onBack)
-        Route.SYNTH -> SynthKeyboardLabScreen(onBack = onBack)
         Route.OSCILLOSCOPE -> OscilloscopeLabScreen(onBack = onBack)
-        Route.METRONOME -> MetronomeLabScreen(onBack = onBack)
+
         Route.SEGMENTED -> SegmentedControlLabScreen(onBack = onBack)
         Route.SPEED_DIAL -> SpeedDialFabLabScreen(onBack = onBack)
         Route.BOTTOM_SHEET -> BottomSheetLabScreen(onBack = onBack)
@@ -520,7 +524,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.NFC_READER -> NfcReaderLabScreen(onBack = onBack)
         Route.MEDIA_VIZ -> MediaVisualizerLabScreen(onBack = onBack)
         Route.FBM -> FbmNoiseLabScreen(onBack = onBack)
-        Route.METABALLS -> MetaballsLabScreen(onBack = onBack)
+        Route.METABALLS -> LiquidMetalSandboxScreen(onBack = onBack)
         Route.TRUCHET -> TruchetLabScreen(onBack = onBack)
         Route.GLITCH -> GlitchLabScreen(onBack = onBack)
         Route.EDGE_DETECT -> EdgeDetectLabScreen(onBack = onBack)
@@ -596,7 +600,6 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.CAMERA_GALLERY -> CameraGalleryScreen(onBack = onBack)
         Route.DYNAMIC_ISLAND -> DynamicIslandScreen(onBack = onBack)
         Route.LIQUID_SWIPE -> LiquidSwipeScreen(onBack = onBack)
-        Route.PARTICLE_TEXT -> ParticleTextScreen(onBack = onBack)
         Route.MORPHING_ICONS -> MorphingIconsScreen(onBack = onBack)
         Route.GOOEY_NAV -> GooeyNavBarScreen(onBack = onBack)
         Route.MORPHING_SHEET -> MorphingSheetScreen(onBack = onBack)
@@ -609,6 +612,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.CAUSTICS -> CausticsScreen(onBack = onBack)
         Route.SOAP_BUBBLE -> SoapBubbleScreen(onBack = onBack)
         Route.CRT -> CrtScreen(onBack = onBack)
+        Route.RAINY_WINDOW -> RainyWindowScreen(onBack = onBack)
         Route.PIXELATE -> PixelateScreen(onBack = onBack)
         Route.HEAT_HAZE -> HeatHazeScreen(onBack = onBack)
         Route.BLACK_HOLE -> BlackHoleScreen(onBack = onBack)
@@ -646,11 +650,8 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.DECISION_WHEEL -> DecisionWheelScreen(onBack = onBack)
         Route.MAGIC8 -> Magic8BallScreen(onBack = onBack)
         Route.WHITE_NOISE -> WhiteNoiseScreen(onBack = onBack)
-        Route.DRUM_MACHINE -> DrumMachineScreen(onBack = onBack)
-        Route.THEREMIN -> ThereminScreen(onBack = onBack)
-        Route.TONE_GEN -> ToneGeneratorScreen(onBack = onBack)
-        Route.CLAP_WHISTLE -> ClapWhistleScreen(onBack = onBack)
         Route.COMPONENTS_3D -> Components3DScreen(onBack = onBack)
+
         Route.SHADER_3D -> ShaderComponents3DScreen(onBack = onBack)
         Route.COORD_TOOLS -> CoordinateToolsScreen(onBack = onBack)
         Route.SUN_MOON -> SunMoonScreen(onBack = onBack)
@@ -673,6 +674,12 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.CONSTRAINT_FLOW -> ConstraintFlowScreen(onBack = onBack)
         Route.LAZY_LIFECYCLE -> LazyLifecycleScreen(onBack = onBack)
         Route.HTML_PARSER_PLAYGROUND -> HtmlParserPlaygroundScreen(onBack = onBack)
+        Route.MARKDOWN_PARSER_PLAYGROUND -> MarkdownParserPlaygroundScreen(onBack = onBack)
+        Route.SVG_COMPILER_PLAYGROUND -> SvgCompilerPlaygroundScreen(onBack = onBack)
+        Route.KTOR_PLAYGROUND -> KtorPlaygroundScreen(onBack = onBack)
+        Route.PARTICLE_VECTOR -> ParticleVectorScreen(onBack = onBack)
+        Route.PRIVACY_GLOW -> PrivacyGlowScreen(onBack = onBack)
+        else -> {}
     }
 }
 
@@ -873,10 +880,13 @@ private fun PermissionWarning(
     hasUsage: Boolean,
     onCopy: (String) -> Unit,
 ) {
+    val context = LocalContext.current
+    val hasWatchAppOps = remember(context) { pro.jayeshseth.devcontrols.util.PermissionUtils.hasWatchAppOps(context) }
     val cmd = buildString {
         if (!hasSecure) appendLine("adb shell pm grant pro.jayeshseth.devcontrols android.permission.WRITE_SECURE_SETTINGS")
         if (!hasSystem) appendLine("adb shell appops set pro.jayeshseth.devcontrols WRITE_SETTINGS allow")
         if (!hasUsage) appendLine("adb shell appops set pro.jayeshseth.devcontrols GET_USAGE_STATS allow")
+        if (!hasWatchAppOps) appendLine("adb shell pm grant pro.jayeshseth.devcontrols android.permission.WATCH_APPOPS")
         appendLine("adb shell pm grant pro.jayeshseth.devcontrols android.permission.READ_PHONE_STATE")
         appendLine("adb shell pm grant pro.jayeshseth.devcontrols android.permission.ANSWER_PHONE_CALLS")
     }.trim()

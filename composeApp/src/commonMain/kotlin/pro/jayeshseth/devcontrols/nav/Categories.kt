@@ -26,6 +26,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Compose Phase Pipeline", Route.COMPOSE_PHASES),
         LabItem("Modifier Constraints Flow", Route.CONSTRAINT_FLOW),
         LabItem("Lazy Viewport Lifecycle", Route.LAZY_LIFECYCLE),
+        LabItem("Custom Layouts Lab", Route.CUSTOM_LAYOUT),
         ),
     ),
     LabCategoryDef(
@@ -82,7 +83,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Glassmorphism", Route.GLASSMORPHISM),
         LabItem("Dynamic Color", Route.DYNAMIC_COLOR),
         LabItem("fBm Noise", Route.FBM),
-        LabItem("Metaballs", Route.METABALLS),
+        LabItem("Liquid Metal Sandbox", Route.METABALLS),
         LabItem("Truchet Tiles", Route.TRUCHET),
         LabItem("Glitch / VHS", Route.GLITCH),
         LabItem("Edge Detect", Route.EDGE_DETECT),
@@ -201,6 +202,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Visual FX",
         listOf(
         LabItem("Holographic Card", Route.HOLOGRAPHIC),
+        LabItem("Liquid Metal Sandbox", Route.METABALLS),
         LabItem("Liquid Swipe", Route.LIQUID_SWIPE),
         LabItem("Dynamic Island", Route.DYNAMIC_ISLAND),
         LabItem("Touch Ripple Water", Route.TOUCH_RIPPLE),
@@ -210,12 +212,14 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Morphing Sheet", Route.MORPHING_SHEET),
         LabItem("Morphing Icons", Route.MORPHING_ICONS),
         LabItem("Particle Text", Route.PARTICLE_TEXT),
+        LabItem("Particle Vector Sandbox", Route.PARTICLE_VECTOR),
         LabItem("Palette Theming", Route.PALETTE_THEMING),
         LabItem("Speedometer", Route.SPEEDOMETER),
         LabItem("Aurora", Route.AURORA),
         LabItem("Caustics", Route.CAUSTICS),
         LabItem("Soap Bubble", Route.SOAP_BUBBLE),
         LabItem("CRT TV", Route.CRT),
+        LabItem("Rainy Window", Route.RAINY_WINDOW),
         LabItem("Pixelate", Route.PIXELATE),
         LabItem("Heat Haze", Route.HEAT_HAZE),
         LabItem("Black Hole", Route.BLACK_HOLE),
@@ -237,6 +241,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Password Generator", Route.PASSWORD_GEN),
         LabItem("Biometric Lock", Route.BIOMETRIC_LOCK),
         LabItem("Clipboard Monitor", Route.CLIPBOARD_MON),
+        LabItem("Privacy Glow HUD", Route.PRIVACY_GLOW),
         ),
     ),
     LabCategoryDef(
@@ -287,12 +292,14 @@ val labCategories: List<LabCategoryDef> = listOf(
     LabCategoryDef(
         "Audio Lab",
         listOf(
+        LabItem("Binaural Beats", Route.BINAURAL_BEATS),
         LabItem("Drum Machine", Route.DRUM_MACHINE),
         LabItem("Theremin", Route.THEREMIN),
         LabItem("Tone Generator", Route.TONE_GEN),
         LabItem("Clap & Whistle Detector", Route.CLAP_WHISTLE),
         ),
     ),
+
     LabCategoryDef(
         "3D Components",
         listOf(
@@ -338,7 +345,6 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Pull to Refresh", Route.PULL_REFRESH),
         LabItem("Accordion", Route.ACCORDION),
         LabItem("PIN Pad", Route.PIN_PAD),
-        LabItem("Custom Layout", Route.CUSTOM_LAYOUT),
         LabItem("Reorder List", Route.REORDER_LIST),
         LabItem("Drawing", Route.DRAWING),
         LabItem("Charts", Route.CHARTS),
@@ -417,6 +423,20 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Parsers",
         listOf(
         LabItem("HTML Parser & Live Render", Route.HTML_PARSER_PLAYGROUND),
+        LabItem("Markdown Compiler & Native Render", Route.MARKDOWN_PARSER_PLAYGROUND),
+        ),
+    ),
+    LabCategoryDef(
+        "Vector & Graphics",
+        listOf(
+        LabItem("SVG Path Compiler & Editor", Route.SVG_COMPILER_PLAYGROUND),
+        LabItem("PNG → SVG Vectorizer", Route.PNG_VECTORIZER),
+        ),
+    ),
+    LabCategoryDef(
+        "Web & Backend Labs",
+        listOf(
+        LabItem("Ktor Pipeline Learner", Route.KTOR_PLAYGROUND),
         ),
     ),
 )

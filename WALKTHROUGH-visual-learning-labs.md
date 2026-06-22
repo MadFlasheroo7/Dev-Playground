@@ -67,6 +67,23 @@ We have successfully implemented and verified the complete suite of 12 visual le
     - **DOM Inspector**: Visual representation of the hierarchical DOM Tree.
     - **Parser Logs**: Tokenization metrics and warning messages for auto-closing unclosed HTML tags.
 
+## 14. Markdown Compiler & Native Render Playground
+*   **File**: [`MarkdownParserPlaygroundScreen.kt`](file:///home/mad_flasher/AndroidStudioProjects/Testdel/composeApp/src/commonMain/kotlin/pro/jayeshseth/devcontrols/ui/MarkdownParserPlaygroundScreen.kt)
+*   **Visual Highlights**: A fully interactive KMP Markdown editor and live compilation playground with three output tabs:
+    - **Render Preview**: Compiles Markdown syntax directly to native Compose UI elements (headers, lists, blockquotes with border sidebars, and styled text spans supporting nested bold/italic formatting, links, and code blocks).
+    - **AST Blocks**: Shows the Abstract Syntax Tree block nodes built by the compiler.
+    - **Compiler Logs**: Displays tokenization metrics, parsing step summaries, and time duration metrics.
+---
+
+## Vector & Graphics Category
+
+## 15. SVG Path Compiler & Bezier Curve Editor
+*   **File**: [`SvgCompilerPlaygroundScreen.kt`](file:///home/mad_flasher/AndroidStudioProjects/Testdel/composeApp/src/commonMain/kotlin/pro/jayeshseth/devcontrols/ui/SvgCompilerPlaygroundScreen.kt)
+*   **Visual Highlights**: A fully interactive Vector drawing lab. Features a dual-pane live SVG path editor and design canvas:
+    - **Canvas Editor**: Renders the SVG path and overlay coordinates with draggable colored anchors. Connects control endpoints to anchors using dashed tangent rigs. Dragging anchors modifies path code coordinates in real time (with snapping to 10px increments grid support).
+    - **AST Segments**: Explains each instruction segment type (MoveTo, LineTo, CubicTo, Close).
+    - **Compiler Logs**: Lists lexer processing logs, coordinate updates, and translation durations.
+
 ---
 
 ## Compilation Verification
