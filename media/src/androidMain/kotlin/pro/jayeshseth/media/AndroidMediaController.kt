@@ -36,7 +36,7 @@ class AndroidMediaController(context: Context) : MediaController {
                     DefaultDataSource.Factory(
                         appContext,
                         DefaultHttpDataSource.Factory()
-                            .setUserAgent("Mozilla/5.0 (Linux; Android 10; Quest 3) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0.0 Mobile Safari/537.36")
+                            .setUserAgent("com.google.android.apps.youtube.vr.oculus/1.57.42 (Linux; U; Android 10; Quest 2 Build/QQ3A.200805.001) gzip")
                             .setAllowCrossProtocolRedirects(true)
                     )
                 )
@@ -90,7 +90,18 @@ class AndroidMediaController(context: Context) : MediaController {
                 _error.value = "Resolve failed: ${e.message}"; _buffering.value = false
                 return@launch
             }
-            player.setMediaItem(Media3Item.fromUri(streamUrl)); player.prepare(); player.playWhenReady = true
+            val uri = try {
+                runCatching {
+                    val f = File.createTempFile("dc-exo-", ".media", appContext.cacheDir)
+                    tempFile?.delete(); tempFile = f
+                    withContext(Dispatchers.IO) { ChunkedDownloader.download(streamUrl, f) }
+                    Uri.fromFile(f)
+                }.getOrElse { Uri.parse(streamUrl) }
+            } catch (e: Exception) {
+                _error.value = "Download failed: ${e.message}"; _buffering.value = false
+                return@launch
+            }
+            player.setMediaItem(Media3Item.fromUri(uri)); player.prepare(); player.playWhenReady = true
         }
     }
 

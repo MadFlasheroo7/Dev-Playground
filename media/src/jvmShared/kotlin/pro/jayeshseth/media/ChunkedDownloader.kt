@@ -24,7 +24,7 @@ internal object ChunkedDownloader {
     private const val MAX_RETRIES = 7
     private const val PACE_MS = 120L // small gap between chunks so we don't burst into YouTube's rate limiter
     private const val USER_AGENT =
-        "Mozilla/5.0 (Linux; Android 10; Quest 3) AppleWebKit/537.36 (KHTML, like Gecko) OculusBrowser/32.0.0.0.0 Mobile Safari/537.36"
+        "com.google.android.apps.youtube.vr.oculus/1.57.42 (Linux; U; Android 10; Quest 2 Build/QQ3A.200805.001) gzip"
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -57,13 +57,25 @@ internal object ChunkedDownloader {
     }
 
     private fun contentLength(url: String): Long {
-        val head = runCatching {
-            client.newCall(
-                Request.Builder().url(url).head()
-                    .header("User-Agent", USER_AGENT).header("Connection", "close").build()
-            ).execute().use { it.header("Content-Length")?.toLongOrNull() ?: -1L }
+        val totalFromGet = runCatching {
+            val req = Request.Builder()
+                .url(url)
+                .get()
+                .header("User-Agent", USER_AGENT)
+                .header("Connection", "close")
+                .header("Range", "bytes=0-0")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful || resp.code == 206) {
+                    val contentRange = resp.header("Content-Range")
+                    val total = contentRange?.substringAfter('/')?.trim()?.toLongOrNull()
+                    if (total != null && total > 0) return@use total
+                }
+                -1L
+            }
         }.getOrDefault(-1L)
-        if (head > 0) return head
+        if (totalFromGet > 0) return totalFromGet
+
         // Fallback: YouTube embeds the content length in the URL's `clen` parameter.
         return Regex("""[?&]clen=(\d+)""").find(url)?.groupValues?.get(1)?.toLongOrNull() ?: -1L
     }

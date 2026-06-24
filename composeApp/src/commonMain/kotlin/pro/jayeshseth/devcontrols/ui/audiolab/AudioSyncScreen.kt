@@ -433,11 +433,14 @@ fun HostDashboard(
             )
         }
 
-        var hostTabSelected by remember { mutableStateOf(0) } // 0: Stream Search, 1: Local File
+        var hostTabSelected by remember { mutableStateOf(0) } // 0: Stream Search, 1: Local File, 2: Direct URL
+        var directUrl by remember { mutableStateOf("") }
+        var directTitle by remember { mutableStateOf("") }
 
         TabRow(selectedTabIndex = hostTabSelected) {
             Tab(selected = hostTabSelected == 0, onClick = { hostTabSelected = 0 }, text = { Text("Stream Search") })
             Tab(selected = hostTabSelected == 1, onClick = { hostTabSelected = 1 }, text = { Text("Local File") })
+            Tab(selected = hostTabSelected == 2, onClick = { hostTabSelected = 2 }, text = { Text("Direct URL") })
         }
 
         if (hostTabSelected == 0) {
@@ -480,7 +483,7 @@ fun HostDashboard(
                     HorizontalDivider()
                 }
             }
-        } else {
+        } else if (hostTabSelected == 1) {
             // Local file selection panel
             Column(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -502,6 +505,40 @@ fun HostDashboard(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 24.dp)
                 )
+            }
+        } else {
+            // Direct URL streaming panel
+            Column(
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                OutlinedTextField(
+                    value = directUrl,
+                    onValueChange = { directUrl = it },
+                    label = { Text("Direct Audio URL (MP3/AAC/etc.)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = directTitle,
+                    onValueChange = { directTitle = it },
+                    label = { Text("Track Title (Optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = {
+                        if (directUrl.isNotBlank()) {
+                            val title = directTitle.ifBlank { "Direct Stream" }
+                            syncManager.broadcastPlay(directUrl.trim(), title, "Network Audio")
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("🔗 Broadcast Stream URL", fontSize = 16.sp)
+                }
             }
         }
 

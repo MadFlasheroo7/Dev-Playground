@@ -46,6 +46,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Input & Automation", Route.INPUT_AUTOMATION),
         LabItem("Feature Flags", Route.FEATURE_FLAGS),
         LabItem("Package Explorer", Route.PACKAGE_EXPLORER),
+        LabItem("Standby Bucket Tracker", Route.STANDBY_TRACKER),
         ),
     ),
     LabCategoryDef(
@@ -270,6 +271,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Regex Tester", Route.REGEX_TEST),
         LabItem("JWT Decoder", Route.JWT_DECODE),
         LabItem("Generators", Route.GENERATORS),
+        LabItem("Animation Builder", Route.ANIMATION_BUILDER),
         ),
     ),
     LabCategoryDef(

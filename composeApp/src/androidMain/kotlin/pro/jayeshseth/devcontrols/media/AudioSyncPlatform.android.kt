@@ -2,6 +2,11 @@ package pro.jayeshseth.devcontrols.media
 
 import android.content.Context
 import android.os.Build
+import android.app.usage.UsageStatsManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.os.PowerManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -65,6 +70,18 @@ class AndroidAudioSyncManager(
 
     override var clientLatencyNudgeMs: Long = 0L
 
+    private val _appStandbyBucket = MutableStateFlow<String?>(null)
+    override val appStandbyBucket = _appStandbyBucket.asStateFlow()
+
+    init {
+        scope.launch {
+            while (isActive) {
+                updateStandbyBucket()
+                delay(10000)
+            }
+        }
+    }
+
     // Sockets & Jobs
     private var serverSocket: ServerSocket? = null
     private var clientSocket: Socket? = null
@@ -95,6 +112,60 @@ class AndroidAudioSyncManager(
         val time = System.currentTimeMillis()
         val formattedTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(time))
         _logConsole.value = (_logConsole.value + "[$formattedTime] $msg").takeLast(80)
+    }
+
+    private fun updateStandbyBucket() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                val usageStats = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+                val bucket = usageStats?.appStandbyBucket
+                val name = when (bucket) {
+                    UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "Active"
+                    UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "Working Set"
+                    UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "Frequent"
+                    UsageStatsManager.STANDBY_BUCKET_RARE -> "Rare"
+                    UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "Restricted"
+                    null -> "Unknown"
+                    else -> "Unknown ($bucket)"
+                }
+                _appStandbyBucket.value = name
+            } catch (e: Exception) {
+                _appStandbyBucket.value = "Error: ${e.message}"
+            }
+        } else {
+            _appStandbyBucket.value = "Not Supported (< API 28)"
+        }
+    }
+
+    override fun requestIgnoreBatteryOptimizations() {
+        val packageName = context.packageName
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+                if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(intent)
+                    log("[Standby] Launching request to ignore battery optimizations.")
+                } else {
+                    log("[Standby] App is already exempted from battery optimizations.")
+                }
+            } catch (e: Exception) {
+                log("[Standby] Request failed: ${e.message}, falling back to settings.")
+                try {
+                    val settingsIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    context.startActivity(settingsIntent)
+                } catch (ex: Exception) {
+                    log("[Standby] Failed to open settings: ${ex.message}")
+                }
+            }
+        } else {
+            log("[Standby] Optimization exemption not supported on this device.")
+        }
     }
 
     private fun getLocalIpv4(): String {

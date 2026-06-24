@@ -17,7 +17,9 @@ interface AudioSyncManager {
     var clientLatencyNudgeMs: Long
     val logConsole: StateFlow<List<String>>
     val discoveredHosts: StateFlow<List<Pair<String, String>>> // IP to Name
+    val appStandbyBucket: StateFlow<String?>
 
+    fun requestIgnoreBatteryOptimizations()
     fun startHost(port: Int = 8099)
     fun stopHost()
     fun broadcastPlay(youtubeUrl: String, title: String, uploader: String, positionMs: Long = 0L)

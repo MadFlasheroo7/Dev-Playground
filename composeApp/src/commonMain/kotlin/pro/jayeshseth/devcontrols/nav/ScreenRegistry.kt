@@ -156,6 +156,8 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.CLAP_WHISTLE -> pro.jayeshseth.devcontrols.ui.audiolab.ClapWhistleScreen(onBack = onBack)
         Route.BINAURAL_BEATS -> pro.jayeshseth.devcontrols.ui.audiolab.BinauralBeatsScreen(onBack = onBack)
         Route.AUDIO_SYNC -> pro.jayeshseth.devcontrols.ui.audiolab.AudioSyncScreen(onBack = onBack)
+        Route.STANDBY_TRACKER -> pro.jayeshseth.devcontrols.ui.devtools.StandbyTrackerScreen(onBack = onBack)
+        Route.ANIMATION_BUILDER -> pro.jayeshseth.devcontrols.ui.devtools.AnimationBuilderScreen(onBack = onBack)
         else -> return false
     }
     return true
@@ -311,5 +313,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.CLAP_WHISTLE,
     Route.BINAURAL_BEATS,
     Route.AUDIO_SYNC,
+    Route.STANDBY_TRACKER,
+    Route.ANIMATION_BUILDER,
 )
 
