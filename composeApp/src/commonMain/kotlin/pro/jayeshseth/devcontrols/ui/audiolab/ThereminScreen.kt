@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.concurrent.Volatile
 
 private class ThereminState { @Volatile var freq = 0.0; @Volatile var amp = 0.0 }
 

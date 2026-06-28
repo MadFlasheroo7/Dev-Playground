@@ -174,7 +174,7 @@ fun DispatcherVisualizerScreen(onBack: () -> Unit) {
                         )
                     }
                     Text(
-                        text = String.format("%.2f s", systemClock),
+                        text = "${((systemClock * 100).toInt() / 100f)} s",
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
                         fontSize = 28.sp

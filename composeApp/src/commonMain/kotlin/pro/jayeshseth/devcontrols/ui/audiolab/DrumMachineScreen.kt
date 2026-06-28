@@ -40,6 +40,7 @@ import kotlinx.coroutines.delay
 import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.math.exp
 
 private val TRACKS = listOf("Kick", "Snare", "Hat", "Clap")
 private const val STEPS = 16
@@ -60,9 +61,9 @@ fun DrumMachineScreen(onBack: () -> Unit) {
         val buf = ShortArray(len)
         for (i in 0 until len) {
             val t = i.toDouble() / sr
-            val freq = 150.0 * Math.exp(-40.0 * t) + 40.0
+            val freq = 150.0 * exp(-40.0 * t) + 40.0
             val phase = 2.0 * PI * freq * t
-            val env = Math.exp(-25.0 * t)
+            val env = exp(-25.0 * t)
             buf[i] = (sin(phase) * env * 0.7 * Short.MAX_VALUE).toInt().toShort()
         }
         buf
@@ -77,7 +78,7 @@ fun DrumMachineScreen(onBack: () -> Unit) {
             rand = (rand * 1103515245L + 12345L)
             val noise = (rand.toDouble() / Long.MAX_VALUE)
             val t = i.toDouble() / sr
-            val env = Math.exp(-120.0 * t)
+            val env = exp(-120.0 * t)
             buf[i] = (noise * env * 0.15 * Short.MAX_VALUE).toInt().toShort()
         }
         buf
@@ -91,9 +92,11 @@ fun DrumMachineScreen(onBack: () -> Unit) {
         for (i in 0 until len) {
             val t = i.toDouble() / sr
             rand = (rand * 1103515245L + 12345L)
+
+
             val noise = (rand.toDouble() / Long.MAX_VALUE)
-            val noiseEnv = Math.exp(-25.0 * t)
-            val body = sin(2.0 * PI * 180.0 * t) * Math.exp(-40.0 * t)
+            val noiseEnv = exp(-25.0 * t)
+            val body = sin(2.0 * PI * 180.0 * t) * exp(-40.0 * t)
             val mix = noise * noiseEnv * 0.4 + body * 0.3
             buf[i] = (mix * Short.MAX_VALUE).toInt().toShort()
         }
@@ -110,10 +113,10 @@ fun DrumMachineScreen(onBack: () -> Unit) {
             rand = (rand * 1103515245L + 12345L)
             val noise = (rand.toDouble() / Long.MAX_VALUE)
             val env = when {
-                t < 0.01 -> Math.exp(-200.0 * t)
-                t < 0.02 -> Math.exp(-200.0 * (t - 0.01))
-                t < 0.03 -> Math.exp(-200.0 * (t - 0.02))
-                else -> Math.exp(-35.0 * (t - 0.03))
+                t < 0.01 -> exp(-200.0 * t)
+                t < 0.02 -> exp(-200.0 * (t - 0.01))
+                t < 0.03 -> exp(-200.0 * (t - 0.02))
+                else -> exp(-35.0 * (t - 0.03))
             }
             buf[i] = (noise * env * 0.35 * Short.MAX_VALUE).toInt().toShort()
         }

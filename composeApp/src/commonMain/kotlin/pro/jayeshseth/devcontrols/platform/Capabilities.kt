@@ -90,3 +90,6 @@ half4 main(float2 fc) {
 }""",
     )
 }
+
+/** Returns the current system time in milliseconds since the epoch, platform-safely. */
+expect fun getPlatformTimeMillis(): Long

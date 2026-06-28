@@ -42,6 +42,7 @@ import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.concurrent.Volatile
 
 private class SynthState {
     @Volatile var freq: Double = 0.0

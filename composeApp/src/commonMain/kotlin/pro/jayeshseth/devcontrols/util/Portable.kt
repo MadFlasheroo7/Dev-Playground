@@ -15,7 +15,7 @@ import kotlin.math.roundToLong
  */
 
 /** Current epoch millis (multiplatform replacement for `System.currentTimeMillis()`). */
-fun nowMillis(): Long = Clock.System.now().toEpochMilliseconds()
+fun nowMillis(): Long = pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis()
 
 /** Current wall-clock date/time in [zone] (default: system zone). */
 fun nowLocal(zone: TimeZone = TimeZone.currentSystemDefault()): LocalDateTime =

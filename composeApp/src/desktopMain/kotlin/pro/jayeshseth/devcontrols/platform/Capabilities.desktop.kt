@@ -142,3 +142,5 @@ actual fun PresentationMode() {
         onDispose { if (previous != null) ws.placement = previous }
     }
 }
+
+actual fun getPlatformTimeMillis(): Long = System.currentTimeMillis()

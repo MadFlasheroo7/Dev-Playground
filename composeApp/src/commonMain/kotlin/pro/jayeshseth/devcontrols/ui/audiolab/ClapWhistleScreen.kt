@@ -84,7 +84,7 @@ private fun Detector() {
             val sr = 44100
             val record = AudioRecorder(sr, N * 2)
             if (!record.isInitialized) { record.release(); return@withContext }
-            val window = FloatArray(N) { (0.5f - 0.5f * cos(2.0 * Math.PI * it / (N - 1))).toFloat() }
+            val window = FloatArray(N) { (0.5f - 0.5f * cos(2.0 * kotlin.math.PI * it / (N - 1))).toFloat() }
             val buf = ShortArray(N); val re = FloatArray(N); val im = FloatArray(N)
             var ambient = 0.02f
             var frame = 0; var lastClapFrame = -100

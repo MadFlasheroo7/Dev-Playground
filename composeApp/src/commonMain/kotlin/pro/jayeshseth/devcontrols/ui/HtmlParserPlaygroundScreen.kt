@@ -914,6 +914,6 @@ object ClockShim {
     // Basic shim utilizing platform capability
     fun now(): Long {
         // We will default to a basic implementation since standard Java System.currentTimeMillis() works inside android/desktop JVM sets
-        return System.currentTimeMillis()
+        return pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis()
     }
 }

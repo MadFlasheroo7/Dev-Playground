@@ -231,6 +231,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Ink Spread", Route.INK_SPREAD),
         LabItem("Voronoi Shatter", Route.VORONOI_SHATTER),
         LabItem("Smoke", Route.SMOKE_FLUID),
+        LabItem("Neon Glow Board", Route.NEON_DRAW),
         ),
     ),
     LabCategoryDef(
@@ -272,6 +273,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("JWT Decoder", Route.JWT_DECODE),
         LabItem("Generators", Route.GENERATORS),
         LabItem("Animation Builder", Route.ANIMATION_BUILDER),
+        LabItem("AI Component Canvas", Route.PROMPT_TO_UI),
         ),
     ),
     LabCategoryDef(

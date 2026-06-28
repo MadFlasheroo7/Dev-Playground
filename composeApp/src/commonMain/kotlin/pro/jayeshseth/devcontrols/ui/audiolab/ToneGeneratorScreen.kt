@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import pro.jayeshseth.devcontrols.platform.AudioPlayer
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlin.concurrent.Volatile
 
 private class ToneState { @Volatile var freq = 440.0; @Volatile var wave = 0; @Volatile var on = false }
 

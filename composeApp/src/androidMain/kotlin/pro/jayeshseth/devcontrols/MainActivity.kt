@@ -365,6 +365,7 @@ import pro.jayeshseth.devcontrols.ui.MediaStreamScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pro.jayeshseth.devcontrols.platform.PersistentStorage.init(this)
         enableEdgeToEdge()
         val openKioskPicker = intent?.getBooleanExtra(
             ToggleActionCallback.EXTRA_OPEN_KIOSK_PICKER, false
@@ -521,6 +522,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.GNSS -> GnssDashboardLabScreen(onBack = onBack)
         Route.WIFI_SCANNER -> WifiScannerLabScreen(onBack = onBack)
         Route.TTS_STT -> TtsSttLabScreen(onBack = onBack)
+        Route.PROMPT_TO_UI -> pro.jayeshseth.devcontrols.ui.PromptToUiScreen(onBack = onBack)
         Route.NFC_READER -> NfcReaderLabScreen(onBack = onBack)
         Route.MEDIA_VIZ -> MediaVisualizerLabScreen(onBack = onBack)
         Route.FBM -> FbmNoiseLabScreen(onBack = onBack)

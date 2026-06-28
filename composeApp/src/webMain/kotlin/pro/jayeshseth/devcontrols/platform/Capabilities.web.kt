@@ -57,3 +57,7 @@ actual fun PresentationMode() {
 actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
     Box(modifier) { fallback() }
 }
+
+private fun jsDateNow(): Double = js("Date.now()")
+
+actual fun getPlatformTimeMillis(): Long = jsDateNow().toLong()

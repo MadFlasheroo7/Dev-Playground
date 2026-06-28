@@ -18,7 +18,7 @@ fun fft(re: FloatArray, im: FloatArray) {
     }
     var len = 2
     while (len <= n) {
-        val ang = -2.0 * Math.PI / len
+        val ang = -2.0 * kotlin.math.PI / len
         val wr = cos(ang).toFloat(); val wi = sin(ang).toFloat()
         var i = 0
         while (i < n) {

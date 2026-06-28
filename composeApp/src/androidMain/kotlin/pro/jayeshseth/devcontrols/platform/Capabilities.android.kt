@@ -173,3 +173,5 @@ actual fun PresentationMode() {
         }
     }
 }
+
+actual fun getPlatformTimeMillis(): Long = System.currentTimeMillis()

@@ -44,3 +44,5 @@ actual fun PresentationMode() { /* no-op until iOS app shell exists */ }
 actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit) {
     Box(modifier) { fallback() }
 }
+
+actual fun getPlatformTimeMillis(): Long = kotlin.system.getTimeMillis()

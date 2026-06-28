@@ -94,7 +94,7 @@ fun ApiVisualizerScreen(onBack: () -> Unit) {
         scope.launch {
             resetSim()
             logs.add("Triggering REST HTTP request batch...")
-            val start = System.currentTimeMillis()
+            val start = pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis()
 
             // Request 1: Users
             val p1 = ApiPacket(packetCounter++, "GET /users/1", 0f, false, Color(0xFFFFCC00))
@@ -113,7 +113,7 @@ fun ApiVisualizerScreen(onBack: () -> Unit) {
             packets.add(p3)
             overfetchSizeKb += 92.1f
 
-            timeElapsedMs = System.currentTimeMillis() - start
+            timeElapsedMs = pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis() - start
             logs.add("REST finished. Total payload size: 152.7 KB (Overfetched unneeded fields).")
         }
     }
@@ -122,13 +122,13 @@ fun ApiVisualizerScreen(onBack: () -> Unit) {
         scope.launch {
             resetSim()
             logs.add("Posting single GraphQL query structure to /graphql...")
-            val start = System.currentTimeMillis()
+            val start = pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis()
 
             val p = ApiPacket(packetCounter++, "POST /graphql (Query)", 0f, false, Color(0xFFE57373))
             packets.add(p)
             overfetchSizeKb += 8.1f // Exact payload only
 
-            timeElapsedMs = System.currentTimeMillis() - start
+            timeElapsedMs = pro.jayeshseth.devcontrols.platform.getPlatformTimeMillis() - start
             logs.add("GraphQL completed. Total payload size: 8.1 KB (No overfetching).")
         }
     }
@@ -250,7 +250,7 @@ fun ApiVisualizerScreen(onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Data Transferred: ${String.format("%.1f KB", overfetchSizeKb)}",
+                            "Data Transferred: ${((overfetchSizeKb * 10).toInt() / 10f)} KB",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
