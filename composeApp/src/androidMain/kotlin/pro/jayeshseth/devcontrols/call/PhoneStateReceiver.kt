@@ -32,16 +32,39 @@ class PhoneStateReceiver : BroadcastReceiver() {
 
     private suspend fun handleRinging(context: Context) {
         val prefs = FocusCallsPrefs.get(context).readSnapshot()
-        if (!prefs.enabled) return
+        if (!prefs.enabled) {
+            setInCallServiceEnabled(context, false)
+            return
+        }
 
         val foreground = ForegroundAppDetector.currentForegroundPackage(context)
         Log.d(TAG, "ringing — foreground=$foreground allowed=${prefs.allowedPackages}")
-        if (foreground == null || foreground !in prefs.allowedPackages) return
+        
+        val isAllowed = foreground != null && foreground in prefs.allowedPackages
+        setInCallServiceEnabled(context, isAllowed)
+
+        if (!isAllowed) return
 
         FocusCallsPrefs.get(context).setPendingReturnPackage(foreground)
 
         if (prefs.autoAnswer) {
             answerCall(context)
+        }
+    }
+
+    private fun setInCallServiceEnabled(context: Context, enabled: Boolean) {
+        try {
+            val pm = context.packageManager
+            val comp = android.content.ComponentName(context, FocusInCallService::class.java)
+            val state = if (enabled) {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+            pm.setComponentEnabledSetting(comp, state, android.content.pm.PackageManager.DONT_KILL_APP)
+            Log.d(TAG, "FocusInCallService enabled state set to: $enabled")
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to set FocusInCallService enabled state", t)
         }
     }
 

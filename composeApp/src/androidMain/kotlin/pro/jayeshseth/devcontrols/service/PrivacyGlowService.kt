@@ -146,7 +146,7 @@ class PrivacyGlowService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             startForeground(1337, createNotification())
         }
         startWatchingOps()
-        showOverlay()
+        refreshActiveOps()
 
         val filter = IntentFilter("pro.jayeshseth.devcontrols.TEST_GLOW")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -196,6 +196,12 @@ class PrivacyGlowService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         for (op in targetOps) {
             if (op !in activeOps) activeOps.add(op)
         }
+
+        if (activeOps.isNotEmpty()) {
+            showOverlay()
+        } else {
+            hideOverlay()
+        }
     }
 
     private val isCameraActiveByAppOps: Boolean
@@ -233,6 +239,7 @@ class PrivacyGlowService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun showOverlay() {
+        if (composeView != null) return
         val size = android.graphics.Point()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val bounds = windowManager.currentWindowMetrics.bounds
@@ -278,6 +285,19 @@ class PrivacyGlowService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         windowManager.addView(composeView, params)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    }
+
+    private fun hideOverlay() {
+        composeView?.let { view ->
+            try {
+                windowManager.removeView(view)
+            } catch (e: Exception) {
+                android.util.Log.e("PrivacyGlow", "Error removing overlay", e)
+            }
+            composeView = null
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        }
     }
 
     private fun createNotification(): Notification {

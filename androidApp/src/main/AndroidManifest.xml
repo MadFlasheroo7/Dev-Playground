@@ -274,6 +274,23 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="rainy_window_overlay" />
         </service>
+
+        <!-- Custom Notification Drawer Service -->
+        <service
+            android:name="pro.jayeshseth.devcontrols.service.CustomStatusBarService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Real Notification Listener Service -->
+        <service
+            android:name="pro.jayeshseth.devcontrols.service.CustomNotificationListener"
+            android:label="DevControls Notification Listener"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

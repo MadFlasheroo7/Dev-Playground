@@ -1,5 +1,8 @@
 package pro.jayeshseth.devcontrols.ui.visualfx
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
@@ -7,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,11 +20,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
@@ -31,6 +35,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -56,32 +61,65 @@ private class LiquidEdge(val p: Float, val cy: Float) : Shape {
     }
 }
 
-/** Liquid swipe — drag from the right; the next page reveals along a gooey curved edge. */
+/** Liquid swipe — drag from the right; the next page reveals along a gooey curved edge with smooth spring release animations. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiquidSwipeScreen(onBack: () -> Unit) {
     var page by remember { mutableIntStateOf(0) }
-    var progress by remember { mutableFloatStateOf(0f) }
+    val progressAnim = remember { Animatable(0f) }
     var cy by remember { mutableFloatStateOf(0f) }
     val next = (page + 1) % PAGES.size
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Liquid Swipe") }, navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }) },
         modifier = Modifier.fillMaxSize()
     ) { inner ->
         Box(
-            Modifier.padding(inner).fillMaxSize()
+            Modifier
+                .padding(inner)
+                .fillMaxSize()
                 .pointerInput(page) {
                     if (cy == 0f) cy = size.height / 2f
                     detectDragGestures(
                         onDragStart = { o -> cy = o.y },
-                        onDragEnd = { if (progress > 0.4f) { page = next; progress = 0f } else progress = 0f },
-                        onDragCancel = { progress = 0f }
-                    ) { change, drag -> change.consume(); progress = (progress - drag.x / size.width).coerceIn(0f, 1f) }
+                        onDragEnd = {
+                            coroutineScope.launch {
+                                if (progressAnim.value > 0.35f) {
+                                    // Complete the sweep animation
+                                    progressAnim.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                    )
+                                    page = next
+                                    progressAnim.snapTo(0f)
+                                } else {
+                                    // Retract page back to edge
+                                    progressAnim.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                    )
+                                }
+                            }
+                        },
+                        onDragCancel = {
+                            coroutineScope.launch {
+                                progressAnim.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                            }
+                        }
+                    ) { change, drag ->
+                        change.consume()
+                        coroutineScope.launch {
+                            val newProgress = (progressAnim.value - drag.x / size.width).coerceIn(0f, 1f)
+                            progressAnim.snapTo(newProgress)
+                        }
+                    }
                 }
         ) {
             PagePanel(PAGES[page], Modifier.fillMaxSize())
-            if (progress > 0f) PagePanel(PAGES[next], Modifier.fillMaxSize().clip(LiquidEdge(progress, cy)))
+            if (progressAnim.value > 0f) {
+                PagePanel(PAGES[next], Modifier.fillMaxSize().clip(LiquidEdge(progressAnim.value, cy)))
+            }
         }
     }
 }
