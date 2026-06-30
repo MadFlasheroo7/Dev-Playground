@@ -1,7 +1,9 @@
 package pro.jayeshseth.devcontrols.ui.visualfx
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +50,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -87,6 +90,48 @@ fun GooeyNavBarScreen(onBack: () -> Unit) {
         )
         previousSelected = selected
     }
+
+    // Tab-specific gradient colors
+    val targetStartColor = when (selected) {
+        0 -> Color(0xFFF27121) // Sunset Orange
+        1 -> Color(0xFF00F2FE) // Neon Cyan
+        2 -> Color(0xFFFF0844) // Love Red
+        3 -> Color(0xFFF12711) // Alert Red
+        4 -> Color(0xFF7F00FF) // Cyber Purple
+        else -> Color(0xFFF27121)
+    }
+    val targetEndColor = when (selected) {
+        0 -> Color(0xFFE94057)
+        1 -> Color(0xFF4FACFE)
+        2 -> Color(0xFFFFB199)
+        3 -> Color(0xFFF5AF19)
+        4 -> Color(0xFFE100FF)
+        else -> Color(0xFFE94057)
+    }
+
+    val startColor by animateColorAsState(targetStartColor, spring(stiffness = Spring.StiffnessLow))
+    val endColor by animateColorAsState(targetEndColor, spring(stiffness = Spring.StiffnessLow))
+
+    // Jiggly scale animation
+    val scale = remember { Animatable(1f) }
+    LaunchedEffect(selected) {
+        launch {
+            scale.animateTo(0.7f, spring(stiffness = Spring.StiffnessHigh))
+            scale.animateTo(1.35f, spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMediumLow))
+            scale.animateTo(1.15f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+        }
+    }
+
+    // Y-offset animation: sink when moving, pop up beyond bounds when settled
+    val isMoving = abs(animatedTarget.value - selected.toFloat()) > 0.05f
+    val targetYOffset = if (isMoving) 0f else -26f // Pop up by 26dp
+    val yOffset by animateFloatAsState(
+        targetValue = targetYOffset,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioHighBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        )
+    )
 
     Scaffold(
         topBar = {
@@ -131,7 +176,6 @@ fun GooeyNavBarScreen(onBack: () -> Unit) {
             }
 
             // Bottom Area: Gooey Navigation Bar
-            val accentColor = MaterialTheme.colorScheme.primary
             val barBgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
             Box(
@@ -144,13 +188,21 @@ fun GooeyNavBarScreen(onBack: () -> Unit) {
                         val targetX = (animatedTarget.value + 0.5f) * slotWidth
                         val sourceX = (previousSelected + 0.5f) * slotWidth
                         val centerY = size.height / 2f
+                        val activeCenterY = centerY + yOffset.dp.toPx()
 
                         val baseRadius = 24.dp.toPx()
+                        val animatedRadius = baseRadius * scale.value
                         val distance = abs(targetX - sourceX)
                         val maxGooeyDistance = slotWidth * 1.5f
 
+                        val gradientBrush = Brush.linearGradient(
+                            colors = listOf(startColor, endColor),
+                            start = Offset(targetX - animatedRadius, activeCenterY),
+                            end = Offset(targetX + animatedRadius, activeCenterY)
+                        )
+
                         if (distance > 1f && distance < maxGooeyDistance) {
-                            // Draw Gooey Liquid Connector Path
+                            // Draw Gooey Liquid Connector Path (drawn at centerY since it is moving/sunk)
                             val path = Path()
 
                             // Calculate dynamic gooey thickness based on distance
@@ -173,19 +225,35 @@ fun GooeyNavBarScreen(onBack: () -> Unit) {
                             path.lineTo(sourceX, centerY - baseRadius)
                             path.close()
 
-                            drawPath(path, accentColor)
+                            drawPath(path, gradientBrush)
                         }
 
-                        // Draw the active pill circle
+                        // Draw the active pill circle (can go beyond bounds based on activeCenterY)
                         drawCircle(
-                            color = accentColor,
-                            radius = baseRadius,
-                            center = Offset(targetX, centerY)
+                            brush = gradientBrush,
+                            radius = animatedRadius,
+                            center = Offset(targetX, activeCenterY)
                         )
                     }
             ) {
                 Row(Modifier.fillMaxSize()) {
                     tabs.forEachIndexed { i, icon ->
+                        val isSelected = selected == i
+                        val iconYOffset by animateFloatAsState(
+                            targetValue = if (isSelected) -26f else 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioHighBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.25f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioHighBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -202,8 +270,12 @@ fun GooeyNavBarScreen(onBack: () -> Unit) {
                             Text(
                                 text = icon,
                                 fontSize = 22.sp,
-                                fontWeight = if (selected == i) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.offset(y = if (selected == i) (-2).dp else 0.dp)
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale
+                                    translationY = iconYOffset.dp.toPx()
+                                }
                             )
                         }
                     }
