@@ -319,5 +319,13 @@ val commonRoutes: Set<Route> = setOf(
     Route.ANIMATION_BUILDER,
     Route.NEON_DRAW,
     Route.PROMPT_TO_UI,
+    Route.MANDELBROT,
+    Route.DISSOLVE,
+    Route.HALFTONE,
+    Route.RAYMARCH,
+    Route.RIPPLE,
+    Route.VORONOI,
+    Route.METABALLS,
+    Route.TOUCH_RIPPLE,
 )
 

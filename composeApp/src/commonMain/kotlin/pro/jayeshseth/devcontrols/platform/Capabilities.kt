@@ -60,6 +60,31 @@ expect fun MicrophonePermissionGate(rationale: String, content: @Composable () -
 @Composable
 expect fun ShaderBackground(source: String, modifier: Modifier, fallback: @Composable () -> Unit)
 
+/**
+ * A general-purpose multiplatform shader container. Compiles and renders an AGSL/SkSL shader
+ * with custom uniforms passed in [uniforms], mapped by [uniformNames] in the exact order of declaration.
+ */
+@Composable
+expect fun CustomShaderBox(
+    shaderSource: String,
+    modifier: Modifier,
+    uniformNames: List<String>,
+    uniforms: Map<String, Any>,
+    fallback: @Composable () -> Unit
+)
+
+/**
+ * Creates a platform-specific RenderEffect from a custom shader.
+ * On Android, uses android.graphics.RenderEffect.
+ * On Desktop/Web/iOS, uses Skia ImageFilter.makeRuntimeShader.
+ */
+expect fun createRuntimeShaderEffect(
+    shaderSource: String,
+    uniformNames: List<String>,
+    uniforms: Map<String, Any>,
+    inputShaderName: String
+): androidx.compose.ui.graphics.RenderEffect?
+
 /** A few ready-to-edit background shaders for the deck editor's "code background" field. */
 object ShaderPresets {
     val list: List<Pair<String, String>> = listOf(

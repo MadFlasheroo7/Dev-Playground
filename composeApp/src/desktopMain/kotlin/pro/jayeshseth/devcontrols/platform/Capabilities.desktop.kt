@@ -1,5 +1,6 @@
 package pro.jayeshseth.devcontrols.platform
 
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
@@ -128,6 +129,106 @@ actual fun ShaderBackground(source: String, modifier: Modifier, fallback: @Compo
             }
         }
     )
+}
+
+@Composable
+actual fun CustomShaderBox(
+    shaderSource: String,
+    modifier: Modifier,
+    uniformNames: List<String>,
+    uniforms: Map<String, Any>,
+    fallback: @Composable () -> Unit
+) {
+    val effect = remember(shaderSource) {
+        runCatching { org.jetbrains.skia.RuntimeEffect.makeForShader(shaderSource) }.getOrNull()
+    }
+    if (effect == null) { Box(modifier) { fallback() }; return }
+    Box(
+        modifier.drawBehind {
+            runCatching {
+                val w = size.width; val h = size.height
+                
+                var floatCount = 0
+                uniformNames.forEach { name ->
+                    val value = uniforms[name]
+                    when (value) {
+                        is Float -> floatCount += 1
+                        is androidx.compose.ui.geometry.Offset -> floatCount += 2
+                        is androidx.compose.ui.graphics.Color -> floatCount += 4
+                        is FloatArray -> floatCount += value.size
+                    }
+                }
+                
+                val bytes = ByteArray(floatCount * 4)
+                var offset = 0
+                
+                fun writeFloat(f: Float) {
+                    val bits = f.toRawBits()
+                    bytes[offset] = (bits and 0xFF).toByte()
+                    bytes[offset + 1] = ((bits shr 8) and 0xFF).toByte()
+                    bytes[offset + 2] = ((bits shr 16) and 0xFF).toByte()
+                    bytes[offset + 3] = ((bits shr 24) and 0xFF).toByte()
+                    offset += 4
+                }
+                
+                uniformNames.forEach { name ->
+                    val value = uniforms[name]
+                    when (value) {
+                        is Float -> writeFloat(value)
+                        is androidx.compose.ui.geometry.Offset -> {
+                            writeFloat(value.x)
+                            writeFloat(value.y)
+                        }
+                        is androidx.compose.ui.graphics.Color -> {
+                            writeFloat(value.red)
+                            writeFloat(value.green)
+                            writeFloat(value.blue)
+                            writeFloat(value.alpha)
+                        }
+                        is FloatArray -> {
+                            value.forEach { writeFloat(it) }
+                        }
+                    }
+                }
+                
+                val shader = effect.makeShader(
+                    org.jetbrains.skia.Data.makeFromBytes(bytes), null, null
+                )
+                val paint = org.jetbrains.skia.Paint().apply { this.shader = shader }
+                drawIntoCanvas { it.nativeCanvas.drawRect(org.jetbrains.skia.Rect.makeWH(w, h), paint) }
+            }
+        }
+    )
+}
+
+actual fun createRuntimeShaderEffect(
+    shaderSource: String,
+    uniformNames: List<String>,
+    uniforms: Map<String, Any>,
+    inputShaderName: String
+): androidx.compose.ui.graphics.RenderEffect? {
+    try {
+        val effect = org.jetbrains.skia.RuntimeEffect.makeForShader(shaderSource)
+        val builder = org.jetbrains.skia.RuntimeShaderBuilder(effect)
+        uniforms.forEach { (name, value) ->
+            when (value) {
+                is Float -> builder.uniform(name, value)
+                is androidx.compose.ui.geometry.Offset -> builder.uniform(name, value.x, value.y)
+                is androidx.compose.ui.graphics.Color -> {
+                    builder.uniform(name, value.red, value.green, value.blue, value.alpha)
+                }
+                is FloatArray -> builder.uniform(name, value)
+            }
+        }
+        val imageFilter = org.jetbrains.skia.ImageFilter.makeRuntimeShader(
+            runtimeShaderBuilder = builder,
+            shaderName = inputShaderName,
+            input = null
+        )
+        return imageFilter.asComposeRenderEffect()
+    } catch (e: Exception) {
+        return null
+    }
 }
 
 /** Set by the desktop entry point so [PresentationMode] can toggle the window to fullscreen. */
