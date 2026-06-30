@@ -201,15 +201,19 @@ actual fun CustomShaderBox(
     )
 }
 
+actual class PlatformShader(val effect: org.jetbrains.skia.RuntimeEffect)
+
+actual fun createPlatformShader(shaderSource: String): PlatformShader? {
+    return runCatching { PlatformShader(org.jetbrains.skia.RuntimeEffect.makeForShader(shaderSource)) }.getOrNull()
+}
+
 actual fun createRuntimeShaderEffect(
-    shaderSource: String,
-    uniformNames: List<String>,
+    shader: PlatformShader,
     uniforms: Map<String, Any>,
     inputShaderName: String
 ): androidx.compose.ui.graphics.RenderEffect? {
     try {
-        val effect = org.jetbrains.skia.RuntimeEffect.makeForShader(shaderSource)
-        val builder = org.jetbrains.skia.RuntimeShaderBuilder(effect)
+        val builder = org.jetbrains.skia.RuntimeShaderBuilder(shader.effect)
         uniforms.forEach { (name, value) ->
             when (value) {
                 is Float -> builder.uniform(name, value)

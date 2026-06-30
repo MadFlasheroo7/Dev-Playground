@@ -73,14 +73,21 @@ expect fun CustomShaderBox(
     fallback: @Composable () -> Unit
 )
 
+expect class PlatformShader
+
 /**
- * Creates a platform-specific RenderEffect from a custom shader.
+ * Compiles a custom shader source once.
+ * Returns null if the platform doesn't support custom shaders (e.g. Android < 13).
+ */
+expect fun createPlatformShader(shaderSource: String): PlatformShader?
+
+/**
+ * Creates a platform-specific RenderEffect from a pre-compiled shader.
  * On Android, uses android.graphics.RenderEffect.
  * On Desktop/Web/iOS, uses Skia ImageFilter.makeRuntimeShader.
  */
 expect fun createRuntimeShaderEffect(
-    shaderSource: String,
-    uniformNames: List<String>,
+    shader: PlatformShader,
     uniforms: Map<String, Any>,
     inputShaderName: String
 ): androidx.compose.ui.graphics.RenderEffect?

@@ -26,10 +26,10 @@
       </SelectionState>
       <SelectionState runConfigName="androidApp">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-06-22T16:01:06.724214869Z">
+        <DropdownSelection timestamp="2026-06-30T18:45:06.964355140Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=ZD222L3SHD" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/mad_flasher/.config/.android/avd/Pixel_4.avd" />
             </handle>
           </Target>
         </DropdownSelection>

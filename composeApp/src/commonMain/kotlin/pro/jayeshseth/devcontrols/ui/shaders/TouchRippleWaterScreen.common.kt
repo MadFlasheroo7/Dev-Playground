@@ -78,6 +78,8 @@ fun TouchRippleWaterScreenMultiplatform(onBack: () -> Unit) {
     }
 }
 
+private class CommonFallbackRipple(val x: Float, val y: Float, val startTime: Float, val color: Color)
+
 @Composable
 private fun RippleContentMultiplatform() {
     val ripples = remember { FloatArray(24) }
@@ -85,6 +87,9 @@ private fun RippleContentMultiplatform() {
     var count by remember { mutableIntStateOf(0) }
     var time by remember { mutableFloatStateOf(0f) }
     var tick by remember { mutableIntStateOf(0) }
+
+    // Keep track of ripples for the fallback overlay
+    val fallbackRipples = remember { mutableListOf<CommonFallbackRipple>() }
 
     LaunchedEffect(Unit) {
         var start = 0L
@@ -103,6 +108,13 @@ private fun RippleContentMultiplatform() {
         ripples[head * 3 + 2] = time
         head = (head + 1) % 8
         if (count < 8) count++
+
+        // Add to fallback list
+        val randomColor = Color.hsv((time * 50f) % 360f, 0.5f, 0.95f)
+        fallbackRipples.add(CommonFallbackRipple(x, y, time, randomColor))
+        if (fallbackRipples.size > 15) {
+            fallbackRipples.removeAt(0)
+        }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -115,18 +127,21 @@ private fun RippleContentMultiplatform() {
         // Re-read tick state to trigger recomposition / graphicsLayer invalidation every frame
         val currentTick = tick
         
+        val platformShader = remember { pro.jayeshseth.devcontrols.platform.createPlatformShader(RIPPLE_AGSL_MULTIPLATFORM) }
+
         val effect = remember(time, count, wPx, hPx) {
-            createRuntimeShaderEffect(
-                shaderSource = RIPPLE_AGSL_MULTIPLATFORM,
-                uniformNames = listOf("iResolution", "iTime", "rippleCount", "ripples"),
-                uniforms = mapOf(
-                    "iResolution" to Offset(wPx, hPx),
-                    "iTime" to time,
-                    "rippleCount" to count.toFloat(),
-                    "ripples" to ripples
-                ),
-                inputShaderName = "content"
-            )
+            if (platformShader != null) {
+                pro.jayeshseth.devcontrols.platform.createRuntimeShaderEffect(
+                    shader = platformShader,
+                    uniforms = mapOf(
+                        "iResolution" to Offset(wPx, hPx),
+                        "iTime" to time,
+                        "rippleCount" to count.toFloat(),
+                        "ripples" to ripples
+                    ),
+                    inputShaderName = "content"
+                )
+            } else null
         }
 
         Box(
@@ -137,8 +152,18 @@ private fun RippleContentMultiplatform() {
                         renderEffect = effect
                     }
                 }
-                .pointerInput(Unit) { detectTapGestures { addRipple(it.x, it.y) } }
-                .pointerInput(Unit) { detectDragGestures { c, _ -> addRipple(c.position.x, c.position.y) } }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { change ->
+                                if (change.pressed) {
+                                    addRipple(change.position.x, change.position.y)
+                                }
+                            }
+                        }
+                    }
+                }
         ) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -177,6 +202,39 @@ private fun RippleContentMultiplatform() {
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+
+            // Draw fallback water ripple overlay if shader effect is not supported (e.g. Android < 13)
+            if (effect == null) {
+                val drawTick = tick // trigger draw
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    fallbackRipples.forEach { ripple ->
+                        val age = time - ripple.startTime
+                        if (age in 0f..1.2f) {
+                            val progress = age / 1.2f
+                            val radius = progress * 160.dp.toPx()
+                            val alpha = 1f - progress
+                            
+                            // Refractive inner ring
+                            drawCircle(
+                                color = ripple.color.copy(alpha = alpha * 0.4f),
+                                radius = radius,
+                                center = Offset(ripple.x, ripple.y),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 5.dp.toPx() * (1f - progress))
+                            )
+                            // Soft outer echo ring
+                            if (progress > 0.15f) {
+                                val p2 = (progress - 0.15f) / 0.85f
+                                drawCircle(
+                                    color = ripple.color.copy(alpha = (1f - p2) * 0.2f),
+                                    radius = radius * 1.2f,
+                                    center = Offset(ripple.x, ripple.y),
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+                                )
+                            }
+                        }
                     }
                 }
             }

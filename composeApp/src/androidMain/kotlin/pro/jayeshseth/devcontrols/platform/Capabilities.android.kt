@@ -183,26 +183,32 @@ actual fun CustomShaderBox(
     })
 }
 
+actual class PlatformShader(val shader: android.graphics.RuntimeShader)
+
+actual fun createPlatformShader(shaderSource: String): PlatformShader? {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return null
+    return runCatching { PlatformShader(android.graphics.RuntimeShader(shaderSource)) }.getOrNull()
+}
+
 actual fun createRuntimeShaderEffect(
-    shaderSource: String,
-    uniformNames: List<String>,
+    shader: PlatformShader,
     uniforms: Map<String, Any>,
     inputShaderName: String
 ): androidx.compose.ui.graphics.RenderEffect? {
     if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return null
     try {
-        val shader = android.graphics.RuntimeShader(shaderSource)
+        val s = shader.shader
         uniforms.forEach { (name, value) ->
             when (value) {
-                is Float -> shader.setFloatUniform(name, value)
-                is androidx.compose.ui.geometry.Offset -> shader.setFloatUniform(name, value.x, value.y)
+                is Float -> s.setFloatUniform(name, value)
+                is androidx.compose.ui.geometry.Offset -> s.setFloatUniform(name, value.x, value.y)
                 is androidx.compose.ui.graphics.Color -> {
-                    shader.setFloatUniform(name, value.red, value.green, value.blue, value.alpha)
+                    s.setFloatUniform(name, value.red, value.green, value.blue, value.alpha)
                 }
-                is FloatArray -> shader.setFloatUniform(name, value)
+                is FloatArray -> s.setFloatUniform(name, value)
             }
         }
-        return android.graphics.RenderEffect.createRuntimeShaderEffect(shader, inputShaderName).asComposeRenderEffect()
+        return android.graphics.RenderEffect.createRuntimeShaderEffect(s, inputShaderName).asComposeRenderEffect()
     } catch (e: Exception) {
         return null
     }
