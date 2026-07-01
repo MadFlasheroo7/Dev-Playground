@@ -129,36 +129,47 @@ private fun RippleContentMultiplatform() {
         
         val platformShader = remember { pro.jayeshseth.devcontrols.platform.createPlatformShader(RIPPLE_AGSL_MULTIPLATFORM) }
 
-        val effect = remember(time, count, wPx, hPx) {
-            if (platformShader != null) {
-                pro.jayeshseth.devcontrols.platform.createRuntimeShaderEffect(
-                    shader = platformShader,
-                    uniforms = mapOf(
-                        "iResolution" to Offset(wPx, hPx),
-                        "iTime" to time,
-                        "rippleCount" to count.toFloat(),
-                        "ripples" to ripples
-                    ),
-                    inputShaderName = "content"
-                )
-            } else null
-        }
-
         Box(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    if (effect != null) {
-                        renderEffect = effect
+                    tick // re-read each frame to invalidate drawing phase
+                    if (platformShader != null) {
+                        renderEffect = pro.jayeshseth.devcontrols.platform.createRuntimeShaderEffect(
+                            shader = platformShader,
+                            uniforms = mapOf(
+                                "iResolution" to Offset(size.width, size.height),
+                                "iTime" to time,
+                                "rippleCount" to count.toFloat(),
+                                "ripples" to ripples
+                            ),
+                            inputShaderName = "content"
+                        )
                     }
                 }
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
-                            val event = awaitPointerEvent()
+                            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             event.changes.forEach { change ->
-                                if (change.pressed) {
-                                    addRipple(change.position.x, change.position.y)
+                                val x = change.position.x
+                                val y = change.position.y
+                                val isDown = change.pressed && !change.previousPressed
+                                val isMove = change.pressed && change.previousPressed
+                                
+                                if (isDown) {
+                                    addRipple(x, y)
+                                } else if (isMove) {
+                                    val lastIdx = (head - 1 + 8) % 8
+                                    val lastX = ripples[lastIdx * 3]
+                                    val lastY = ripples[lastIdx * 3 + 1]
+                                    val lastT = ripples[lastIdx * 3 + 2]
+                                    val dx = x - lastX
+                                    val dy = y - lastY
+                                    val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                                    if (count == 0 || (dist > 40f && time - lastT > 0.08f)) {
+                                        addRipple(x, y)
+                                    }
                                 }
                             }
                         }
@@ -207,7 +218,7 @@ private fun RippleContentMultiplatform() {
             }
 
             // Draw fallback water ripple overlay if shader effect is not supported (e.g. Android < 13)
-            if (effect == null) {
+            if (platformShader == null) {
                 val drawTick = tick // trigger draw
                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                     fallbackRipples.forEach { ripple ->

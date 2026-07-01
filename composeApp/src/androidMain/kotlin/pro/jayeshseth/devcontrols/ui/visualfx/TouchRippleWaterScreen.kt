@@ -1,12 +1,8 @@
 package pro.jayeshseth.devcontrols.ui.visualfx
 
-import android.content.Context
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
-import android.opengl.GLES20
-import android.opengl.GLSurfaceView
 import android.os.Build
-import android.view.MotionEvent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -29,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -36,29 +33,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.FloatBuffer
-import javax.microedition.khronos.egl.EGLConfig
-import javax.microedition.khronos.opengles.GL10
+import kotlin.math.exp
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 private const val RIPPLE_AGSL = """
 uniform shader content;
 uniform float2 iResolution;
 uniform float iTime;
 uniform float rippleCount;
-uniform float ripples[24]; // 8 × (x, y, startTime)
+uniform float rippleX[8];
+uniform float rippleY[8];
+uniform float rippleTime[8];
 half4 main(float2 fragCoord) {
     float2 off = float2(0.0);
     for (int i = 0; i < 8; i++) {
         if (float(i) >= rippleCount) break;
-        float2 c = float2(ripples[i * 3], ripples[i * 3 + 1]);
-        float age = iTime - ripples[i * 3 + 2];
+        float2 c = float2(rippleX[i], rippleY[i]);
+        float age = iTime - rippleTime[i];
         if (age < 0.0) continue;
         float2 d = fragCoord - c;
         float dist = length(d) + 0.001;
@@ -66,68 +68,6 @@ half4 main(float2 fragCoord) {
         off += (d / dist) * w;
     }
     return content.eval(fragCoord + off);
-}
-"""
-
-private const val VERTEX_SHADER_GLSL = """
-attribute vec4 aPosition;
-varying vec2 vPosition;
-void main() {
-    gl_Position = aPosition;
-    vPosition = aPosition.xy;
-}
-"""
-
-private const val FRAGMENT_SHADER_GLSL = """
-precision mediump float;
-varying vec2 vPosition;
-uniform vec2 iResolution;
-uniform float iTime;
-uniform float rippleCount;
-uniform float ripples[24];
-
-float sdRoundedBox(vec2 p, vec2 b, vec4 r) {
-    r.xy = (p.x > 0.0) ? r.xy : r.zw;
-    r.x  = (p.y > 0.0) ? r.x  : r.y;
-    vec2 q = abs(p) - b + r.x;
-    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r.x;
-}
-
-void main() {
-    vec2 fragCoord = (vPosition * 0.5 + 0.5) * iResolution;
-    fragCoord.y = iResolution.y - fragCoord.y;
-
-    vec2 off = vec2(0.0);
-    for (int i = 0; i < 8; i++) {
-        if (float(i) >= rippleCount) break;
-        vec2 c = vec2(ripples[i * 3], ripples[i * 3 + 1]);
-        float age = iTime - ripples[i * 3 + 2];
-        if (age < 0.0 || age > 3.0) continue;
-        vec2 d = fragCoord - c;
-        float dist = length(d) + 0.001;
-        float w = sin(dist * 0.09 - age * 7.0) * exp(-age * 2.2) * exp(-dist * 0.004) * 22.0;
-        off += (d / dist) * w;
-    }
-    
-    vec2 distortedCoord = fragCoord + off;
-    float cellSize = iResolution.x / 3.0;
-    vec2 cell = floor(distortedCoord / cellSize);
-    vec2 local = fract(distortedCoord / cellSize);
-    
-    float cellIdx = cell.y * 3.0 + cell.x;
-    vec3 cardCol = 0.5 + 0.5 * cos(6.2831 * (cellIdx * 0.08 + vec3(0.0, 0.33, 0.67)));
-    
-    float margin = 0.08;
-    float d = sdRoundedBox(local - 0.5, vec2(0.5 - margin), vec4(0.12));
-    
-    vec3 bgCol = vec3(0.04, 0.04, 0.08);
-    vec3 col = d < 0.0 ? cardCol : bgCol;
-    
-    if (d < 0.0) {
-        col *= (1.0 - 0.15 * smoothstep(-0.02, 0.0, d));
-    }
-    
-    gl_FragColor = vec4(col, 1.0);
 }
 """
 
@@ -140,19 +80,18 @@ fun TouchRippleWaterScreen(onBack: () -> Unit) {
         modifier = Modifier.fillMaxSize()
     ) { inner ->
         Column(Modifier.padding(inner).fillMaxSize()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                RippleContentAndroid13()
-            } else {
-                RippleContentGLSLFallback()
-            }
+            RippleContent()
         }
     }
 }
 
 @Composable
-private fun RippleContentAndroid13() {
-    val shader = remember { RuntimeShader(RIPPLE_AGSL) }
-    val ripples = remember { FloatArray(24) }
+private fun RippleContent() {
+    val isSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val shader = remember { if (isSupported) RuntimeShader(RIPPLE_AGSL) else null }
+    val rippleX = remember { FloatArray(8) }
+    val rippleY = remember { FloatArray(8) }
+    val rippleTime = remember { FloatArray(8) }
     var head by remember { mutableIntStateOf(0) }
     var count by remember { mutableIntStateOf(0) }
     var time by remember { mutableFloatStateOf(0f) }
@@ -170,163 +109,220 @@ private fun RippleContentAndroid13() {
     }
 
     fun addRipple(x: Float, y: Float) {
-        ripples[head * 3] = x; ripples[head * 3 + 1] = y; ripples[head * 3 + 2] = time
-        head = (head + 1) % 8; if (count < 8) count++
+        rippleX[head] = x
+        rippleY[head] = y
+        rippleTime[head] = time
+        head = (head + 1) % 8
+        if (count < 8) count++
     }
 
-    Box(
-        Modifier.fillMaxSize()
-            .graphicsLayer {
-                tick // re-read each frame
-                shader.setFloatUniform("iResolution", size.width, size.height)
-                shader.setFloatUniform("iTime", time)
-                shader.setFloatUniform("rippleCount", count.toFloat())
-                shader.setFloatUniform("ripples", ripples)
-                renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
-            }
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { change ->
-                            if (change.pressed) {
-                                addRipple(change.position.x, change.position.y)
+    if (isSupported && shader != null) {
+        // ── AGSL path: RuntimeShader content distortion (Android 13+) ──
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer {
+                    tick // re-read each frame
+                    shader.setFloatUniform("iResolution", size.width, size.height)
+                    shader.setFloatUniform("iTime", time)
+                    shader.setFloatUniform("rippleCount", count.toFloat())
+                    shader.setFloatUniform("rippleX", rippleX)
+                    shader.setFloatUniform("rippleY", rippleY)
+                    shader.setFloatUniform("rippleTime", rippleTime)
+                    renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "content").asComposeRenderEffect()
+                }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { change ->
+                                val x = change.position.x
+                                val y = change.position.y
+                                val isDown = change.pressed && !change.previousPressed
+                                val isMove = change.pressed && change.previousPressed
+
+                                if (isDown) {
+                                    addRipple(x, y)
+                                } else if (isMove) {
+                                    val lastIdx = (head - 1 + 8) % 8
+                                    val lastX = rippleX[lastIdx]
+                                    val lastY = rippleY[lastIdx]
+                                    val lastT = rippleTime[lastIdx]
+                                    val dx = x - lastX
+                                    val dy = y - lastY
+                                    val dist = sqrt(dx * dx + dy * dy)
+                                    if (count == 0 || (dist > 40f && time - lastT > 0.08f)) {
+                                        addRipple(x, y)
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
-    ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxSize().background(Color(0xFF0B0B16)).padding(8.dp)
         ) {
-            itemsIndexed((1..80).toList()) { index, item ->
-                val anim = remember { Animatable(0f) }
-                LaunchedEffect(Unit) {
-                    anim.snapTo(0f)
-                    kotlinx.coroutines.delay(index * 25L)
-                    anim.animateTo(1f, tween(450))
+            GridContent()
+        }
+    } else {
+        // ── Fallback: drawBitmapMesh distortion (Android < 13) ──
+        val view = LocalView.current
+        var snapshot by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+        var contentBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
+
+        // Mesh configuration — 40×40 gives smooth distortion with 1681 vertices
+        val meshW = 40
+        val meshH = 40
+        val vertCount = (meshW + 1) * (meshH + 1)
+        val verts = remember { FloatArray(vertCount * 2) }
+
+        // Check if any ripple is currently animating
+        val hasActiveRipples = run {
+            var active = false
+            for (i in 0 until count) {
+                val age = time - rippleTime[i]
+                if (age in 0f..3f) {
+                    active = true
+                    break
                 }
-                Box(
-                    Modifier.padding(6.dp).aspectRatio(1f)
-                        .graphicsLayer {
-                            alpha = anim.value
-                            translationY = (1f - anim.value) * 50f
-                            val s = 0.85f + anim.value * 0.15f
-                            scaleX = s; scaleY = s
+            }
+            active
+        }
+
+        // Recycle snapshot when all ripples expire
+        LaunchedEffect(hasActiveRipples) {
+            if (!hasActiveRipples && snapshot != null) {
+                snapshot?.recycle()
+                snapshot = null
+            }
+        }
+
+        // Helper: capture the content region via View.draw() (synchronous, main thread)
+        fun captureContent(): android.graphics.Bitmap? {
+            val b = contentBounds
+            val w = b.width.toInt()
+            val h = b.height.toInt()
+            if (w <= 0 || h <= 0) return null
+            val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bmp)
+            canvas.translate(-b.left, -b.top)
+            view.draw(canvas)
+            return bmp
+        }
+
+        Box(Modifier.fillMaxSize()) {
+            // Content layer
+            Box(
+                Modifier.fillMaxSize()
+                    .onGloballyPositioned { coords ->
+                        contentBounds = coords.boundsInWindow()
+                    }
+                    .graphicsLayer {
+                        // Hide original content while distortion overlay is active
+                        alpha = if (hasActiveRipples && snapshot != null) 0f else 1f
+                    }
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                event.changes.forEach { change ->
+                                    val x = change.position.x
+                                    val y = change.position.y
+                                    val isDown = change.pressed && !change.previousPressed
+                                    val isMove = change.pressed && change.previousPressed
+
+                                    if (isDown) {
+                                        // Capture snapshot on first touch of a new ripple burst
+                                        if (snapshot == null) {
+                                            snapshot = captureContent()
+                                        }
+                                        addRipple(x, y)
+                                    } else if (isMove) {
+                                        val lastIdx = (head - 1 + 8) % 8
+                                        val lastX = rippleX[lastIdx]
+                                        val lastY = rippleY[lastIdx]
+                                        val lastT = rippleTime[lastIdx]
+                                        val dx = x - lastX
+                                        val dy = y - lastY
+                                        val dist = sqrt(dx * dx + dy * dy)
+                                        if (count == 0 || (dist > 40f && time - lastT > 0.08f)) {
+                                            addRipple(x, y)
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        .background(Color.hsv((item * 25f) % 360f, 0.6f, 0.95f), RoundedCornerShape(14.dp)),
-                    Alignment.Center
-                ) { Text("$item", color = Color.White, fontWeight = FontWeight.Bold) }
+                    }
+            ) {
+                GridContent()
+            }
+
+            // Distortion overlay — draws the warped snapshot via drawBitmapMesh
+            if (hasActiveRipples && snapshot != null) {
+                @Suppress("UNUSED_VARIABLE")
+                val currentTick = tick // read to ensure recomposition each frame
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val bmp = snapshot ?: return@Canvas
+                    val w = bmp.width.toFloat()
+                    val h = bmp.height.toFloat()
+
+                    // Compute displaced mesh vertices — same formula as AGSL shader
+                    for (j in 0..meshH) {
+                        for (i in 0..meshW) {
+                            val idx = (j * (meshW + 1) + i) * 2
+                            val px = w * i / meshW
+                            val py = h * j / meshH
+                            var offX = 0f
+                            var offY = 0f
+                            for (r in 0 until count) {
+                                val age = time - rippleTime[r]
+                                if (age < 0f || age > 3f) continue
+                                val dx = px - rippleX[r]
+                                val dy = py - rippleY[r]
+                                val d = sqrt(dx * dx + dy * dy) + 0.001f
+                                val wt = (sin((d * 0.09f - age * 7f).toDouble()) *
+                                        exp((-age * 2.2f).toDouble()) *
+                                        exp((-d * 0.004f).toDouble()) * 22.0).toFloat()
+                                offX += (dx / d) * wt
+                                offY += (dy / d) * wt
+                            }
+                            verts[idx] = px + offX
+                            verts[idx + 1] = py + offY
+                        }
+                    }
+
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawBitmapMesh(
+                            bmp, meshW, meshH, verts, 0, null, 0, null
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RippleContentGLSLFallback() {
-    val startTime = remember { System.nanoTime() }
-    val ripples = remember { FloatArray(24) }
-    var head by remember { mutableIntStateOf(0) }
-    var count by remember { mutableIntStateOf(0) }
-    var viewWidth by remember { mutableFloatStateOf(0f) }
-    var viewHeight by remember { mutableFloatStateOf(0f) }
-
-    fun addRipple(x: Float, y: Float) {
-        val time = (System.nanoTime() - startTime) / 1e9f
-        ripples[head * 3] = x
-        ripples[head * 3 + 1] = y
-        ripples[head * 3 + 2] = time
-        head = (head + 1) % 8
-        if (count < 8) count++
-    }
-
-    class RippleRenderer : GLSurfaceView.Renderer {
-        private var program = 0
-        private var positionHandle = 0
-        private var resolutionHandle = 0
-        private var timeHandle = 0
-        private var rippleCountHandle = 0
-        private var ripplesHandle = 0
-
-        private val vertexBuffer: FloatBuffer = ByteBuffer.allocateDirect(8 * 4).run {
-            order(ByteOrder.nativeOrder())
-            asFloatBuffer().apply {
-                put(floatArrayOf(
-                    -1f, -1f,
-                     1f, -1f,
-                    -1f,  1f,
-                     1f,  1f
-                ))
-                position(0)
+private fun GridContent() {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0B0B16)).padding(8.dp)
+    ) {
+        itemsIndexed((1..80).toList()) { index, item ->
+            val anim = remember { Animatable(0f) }
+            LaunchedEffect(Unit) {
+                anim.snapTo(0f)
+                kotlinx.coroutines.delay(index * 25L)
+                anim.animateTo(1f, tween(450))
             }
-        }
-
-        override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-            GLES20.glClearColor(0.04f, 0.04f, 0.08f, 1f)
-            val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER_GLSL)
-            val fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, FRAGMENT_SHADER_GLSL)
-            program = GLES20.glCreateProgram().apply {
-                GLES20.glAttachShader(this, vertexShader)
-                GLES20.glAttachShader(this, fragmentShader)
-                GLES20.glLinkProgram(this)
-            }
-            positionHandle = GLES20.glGetAttribLocation(program, "aPosition")
-            resolutionHandle = GLES20.glGetUniformLocation(program, "iResolution")
-            timeHandle = GLES20.glGetUniformLocation(program, "iTime")
-            rippleCountHandle = GLES20.glGetUniformLocation(program, "rippleCount")
-            ripplesHandle = GLES20.glGetUniformLocation(program, "ripples")
-        }
-
-        override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-            GLES20.glViewport(0, 0, width, height)
-            viewWidth = width.toFloat()
-            viewHeight = height.toFloat()
-        }
-
-        override fun onDrawFrame(gl: GL10?) {
-            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-            GLES20.glUseProgram(program)
-            GLES20.glEnableVertexAttribArray(positionHandle)
-            GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 8, vertexBuffer)
-            
-            GLES20.glUniform2f(resolutionHandle, viewWidth, viewHeight)
-            val elapsed = (System.nanoTime() - startTime) / 1e9f
-            GLES20.glUniform1f(timeHandle, elapsed)
-            GLES20.glUniform1f(rippleCountHandle, count.toFloat())
-            GLES20.glUniform1fv(ripplesHandle, 24, ripples, 0)
-            
-            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
-            GLES20.glDisableVertexAttribArray(positionHandle)
-        }
-
-        private fun loadShader(type: Int, shaderCode: String): Int {
-            return GLES20.glCreateShader(type).also { shader ->
-                GLES20.glShaderSource(shader, shaderCode)
-                GLES20.glCompileShader(shader)
-            }
-        }
-    }
-
-    AndroidView(
-        factory = { ctx ->
-            object : GLSurfaceView(ctx) {
-                override fun onTouchEvent(event: MotionEvent): Boolean {
-                    when (event.actionMasked) {
-                        MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                            addRipple(event.x, event.y)
-                            return true
-                        }
+            Box(
+                Modifier.padding(6.dp).aspectRatio(1f)
+                    .graphicsLayer {
+                        alpha = anim.value
+                        translationY = (1f - anim.value) * 50f
+                        val s = 0.85f + anim.value * 0.15f
+                        scaleX = s; scaleY = s
                     }
-                    return super.onTouchEvent(event)
-                }
-            }.apply {
-                setEGLContextClientVersion(2)
-                setRenderer(RippleRenderer())
-                renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
-            }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+                    .background(Color.hsv((item * 25f) % 360f, 0.6f, 0.95f), RoundedCornerShape(14.dp)),
+                Alignment.Center
+            ) { Text("$item", color = Color.White, fontWeight = FontWeight.Bold) }
+        }
+    }
 }
