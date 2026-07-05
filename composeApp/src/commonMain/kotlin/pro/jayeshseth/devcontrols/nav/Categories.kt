@@ -372,6 +372,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Device & Media",
         listOf(
         LabItem("Haptics Lab", Route.HAPTICS),
+        LabItem("Gamepad Playground", Route.GAMEPAD_PLAYGROUND),
         LabItem("USB Inspector", Route.USB_INSPECTOR),
         LabItem("Audio Reactive", Route.AUDIO_REACTIVE),
         LabItem("Synth Keyboard", Route.SYNTH),

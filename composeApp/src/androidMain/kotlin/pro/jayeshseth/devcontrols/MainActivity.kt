@@ -384,6 +384,20 @@ class MainActivity : ComponentActivity() {
             AppRoot(initialRoute = if (openKioskPicker) Route.KIOSK_PICKER else Route.MAIN)
         }
     }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (pro.jayeshseth.devcontrols.ui.gamepad.GamepadManagerHolder.active?.onKeyEvent(event) == true) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: android.view.MotionEvent): Boolean {
+        if (pro.jayeshseth.devcontrols.ui.gamepad.GamepadManagerHolder.active?.onMotionEvent(event) == true) {
+            return true
+        }
+        return super.dispatchGenericMotionEvent(event)
+    }
 }
 
 @androidx.compose.runtime.Composable
@@ -681,6 +695,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.KTOR_PLAYGROUND -> KtorPlaygroundScreen(onBack = onBack)
         Route.PARTICLE_VECTOR -> ParticleVectorScreen(onBack = onBack)
         Route.PRIVACY_GLOW -> PrivacyGlowScreen(onBack = onBack)
+        Route.GAMEPAD_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.gamepad.GamepadPlaygroundScreen(onBack = onBack)
         else -> {}
     }
 }

@@ -212,6 +212,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.FUNCTION_PLOTTER,
     Route.GALTON,
     Route.GAME_2048,
+    Route.GAMEPAD_PLAYGROUND,
     Route.GAME_OF_LIFE,
     Route.GIT_VISUALIZER,
     Route.GLOBE,

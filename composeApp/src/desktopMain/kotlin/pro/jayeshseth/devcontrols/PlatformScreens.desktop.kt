@@ -33,6 +33,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.VORONOI -> VoronoiLabScreenMultiplatform(onBack)
         Route.METABALLS -> MetaballsLabScreenMultiplatform(onBack)
         Route.TOUCH_RIPPLE -> TouchRippleWaterScreenMultiplatform(onBack)
+        Route.GAMEPAD_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.gamepad.GamepadPlaygroundScreen(onBack)
         else -> MissingScreen(route, onBack)
     }
 }
