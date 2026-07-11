@@ -29,7 +29,7 @@ fun AppRoot(initialRoute: Route = Route.MAIN) {
 
         if (route == Route.MAIN) {
             PlatformHome(homeScroll, expandedCats) { route = it }
-        } else if (!CommonScreen(route, onBack = { route = Route.MAIN })) {
+        } else if (!CommonScreen(route, onBack = { route = Route.MAIN }, onNavigate = { route = it })) {
             PlatformScreenHost(route) { route = Route.MAIN }
         }
     }

@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
  * is not a common screen (then the platform host handles it). Generated as screens migrate.
  */
 @Composable
-fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
+fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit = {}): Boolean {
     when (route) {
         Route.ACCORDION -> pro.jayeshseth.devcontrols.ui.AccordionLabScreen(onBack = onBack)
         Route.ANIMATED_BORDERS -> pro.jayeshseth.devcontrols.ui.AnimatedBordersLabScreen(onBack = onBack)
@@ -58,6 +58,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.GLOBE -> pro.jayeshseth.devcontrols.ui.PointCloudGlobeLabScreen(onBack = onBack)
         Route.GOOEY_NAV -> pro.jayeshseth.devcontrols.ui.visualfx.GooeyNavBarScreen(onBack = onBack)
         Route.GRADIENT_MORPH -> pro.jayeshseth.devcontrols.ui.GradientMorphLabScreen(onBack = onBack)
+        Route.HABIT_TRACKER -> pro.jayeshseth.devcontrols.ui.productivity.HabitTrackerScreen(onBack = onBack)
         Route.HASHING -> pro.jayeshseth.devcontrols.ui.privacy.HashingScreen(onBack = onBack)
         Route.HEIGHTMAP3D -> pro.jayeshseth.devcontrols.ui.Heightmap3DLabScreen(onBack = onBack)
         Route.HTML_PARSER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.HtmlParserPlaygroundScreen(onBack = onBack)
@@ -65,7 +66,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.JSON_FMT -> pro.jayeshseth.devcontrols.ui.devtools.JsonFormatterScreen(onBack = onBack)
         Route.JWT_DECODE -> pro.jayeshseth.devcontrols.ui.devtools.JwtDecoderScreen(onBack = onBack)
         Route.KALEIDOSCOPE -> pro.jayeshseth.devcontrols.ui.KaleidoscopeLabScreen(onBack = onBack)
-        Route.KANBAN -> pro.jayeshseth.devcontrols.ui.KanbanLabScreen(onBack = onBack)
+        Route.KANBAN -> pro.jayeshseth.devcontrols.ui.KanbanLabScreen(onBack = onBack, onNavigate = onNavigate)
         Route.KTOR_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.KtorPlaygroundScreen(onBack = onBack)
         Route.LAZY_LIFECYCLE -> pro.jayeshseth.devcontrols.ui.LazyLifecycleScreen(onBack = onBack)
         Route.LIGHTNING -> pro.jayeshseth.devcontrols.ui.LightningLabScreen(onBack = onBack)
@@ -160,6 +161,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit): Boolean {
         Route.ANIMATION_BUILDER -> pro.jayeshseth.devcontrols.ui.devtools.AnimationBuilderScreen(onBack = onBack)
         Route.NEON_DRAW -> pro.jayeshseth.devcontrols.ui.visualfx.NeonGlowBoardScreen(onBack = onBack)
         Route.PROMPT_TO_UI -> pro.jayeshseth.devcontrols.ui.PromptToUiScreen(onBack = onBack)
+        Route.BUDGET_MANAGER -> pro.jayeshseth.devcontrols.ui.finance.BudgetManagerScreen(onBack = onBack)
         else -> return false
     }
     return true
@@ -218,6 +220,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.GLOBE,
     Route.GOOEY_NAV,
     Route.GRADIENT_MORPH,
+    Route.HABIT_TRACKER,
     Route.HASHING,
     Route.HEIGHTMAP3D,
     Route.HTML_PARSER_PLAYGROUND,
@@ -328,5 +331,5 @@ val commonRoutes: Set<Route> = setOf(
     Route.VORONOI,
     Route.METABALLS,
     Route.TOUCH_RIPPLE,
+    Route.BUDGET_MANAGER
 )
-

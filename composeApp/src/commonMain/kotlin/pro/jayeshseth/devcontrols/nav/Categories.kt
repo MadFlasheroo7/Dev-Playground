@@ -326,6 +326,8 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Sun & Moon", Route.SUN_MOON),
         LabItem("Compass Navigator", Route.COMPASS_NAV),
         LabItem("GPS Tracker", Route.GPS_TRACKER),
+        LabItem("Acoustic 3D Scanner", Route.ACOUSTIC_SLAM),
+        LabItem("WiFi Signal Heatmap", Route.WIFI_HEATMAP),
         ),
     ),
     LabCategoryDef(
@@ -443,6 +445,15 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Web & Backend Labs",
         listOf(
         LabItem("Ktor Pipeline Learner", Route.KTOR_PLAYGROUND),
+        ),
+    ),
+    LabCategoryDef(
+        "Productivity & Finance",
+        listOf(
+        LabItem("Budget Manager", Route.BUDGET_MANAGER),
+        LabItem("Goal & Task Tracker", Route.KANBAN),
+        LabItem("Pomodoro Focus Sync", Route.POMODORO),
+        LabItem("Habit Grid Tracker", Route.HABIT_TRACKER),
         ),
     ),
 )

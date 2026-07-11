@@ -330,6 +330,8 @@ import pro.jayeshseth.devcontrols.ui.maps.CoordinateToolsScreen
 import pro.jayeshseth.devcontrols.ui.maps.SunMoonScreen
 import pro.jayeshseth.devcontrols.ui.maps.CompassNavigatorScreen
 import pro.jayeshseth.devcontrols.ui.maps.GpsTrackerScreen
+import pro.jayeshseth.devcontrols.ui.maps.AcousticSlamScreen
+import pro.jayeshseth.devcontrols.ui.maps.WifiHeatmapScreen
 import pro.jayeshseth.devcontrols.ui.present.PresentScreen
 import pro.jayeshseth.devcontrols.ui.present.DeckEditorScreen
 import pro.jayeshseth.devcontrols.ui.SystemBarSheetScreen
@@ -673,6 +675,8 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.SUN_MOON -> SunMoonScreen(onBack = onBack)
         Route.COMPASS_NAV -> CompassNavigatorScreen(onBack = onBack)
         Route.GPS_TRACKER -> GpsTrackerScreen(onBack = onBack)
+        Route.ACOUSTIC_SLAM -> AcousticSlamScreen(onBack = onBack)
+        Route.WIFI_HEATMAP -> WifiHeatmapScreen(onBack = onBack)
         Route.PRESENT -> PresentScreen(onBack = onBack)
         Route.DECK_EDITOR -> DeckEditorScreen(onBack = onBack)
         Route.GRADIENT_MORPH -> GradientMorphLabScreen(onBack = onBack)

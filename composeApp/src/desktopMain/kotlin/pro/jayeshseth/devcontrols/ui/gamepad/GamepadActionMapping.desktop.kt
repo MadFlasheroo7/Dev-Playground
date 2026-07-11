@@ -8,10 +8,15 @@ data class ButtonMapping(val keyCode: Int, val keyLabel: String, val actionId: S
 
 object GamepadActions {
     val all = listOf(
-        GamepadAction("NONE",          "No action"),
-        GamepadAction("SOUND_BEEP",    "Audio: Beep"),
-        GamepadAction("LOG",           "Log to Console"),
-        GamepadAction("NAVIGATE_BACK", "Navigate Back (stub)"),
+        GamepadAction("NONE",             "No action"),
+        GamepadAction("SOUND_BEEP",       "Audio: Beep"),
+        GamepadAction("MEDIA_PLAY_PAUSE", "Media: Play / Pause"),
+        GamepadAction("MEDIA_NEXT",       "Media: Next Track"),
+        GamepadAction("MEDIA_PREV",       "Media: Previous Track"),
+        GamepadAction("VOLUME_UP",        "Volume: Increase"),
+        GamepadAction("VOLUME_DOWN",      "Volume: Decrease"),
+        GamepadAction("VOLUME_MUTE",      "Volume: Mute / Unmute"),
+        GamepadAction("LOG",              "Log to Console"),
     )
 
     fun execute(actionId: String) {
@@ -21,10 +26,37 @@ object GamepadActions {
                     Toolkit.getDefaultToolkit().beep()
                 }
             }
+            "MEDIA_PLAY_PAUSE" -> runCommand("playerctl play-pause")
+            "MEDIA_NEXT"       -> runCommand("playerctl next")
+            "MEDIA_PREV"       -> runCommand("playerctl previous")
+            "VOLUME_UP"        -> {
+                if (!runCommand("pactl set-sink-volume @DEFAULT_SINK@ +5%")) {
+                    runCommand("amixer set Master 5%+")
+                }
+            }
+            "VOLUME_DOWN"      -> {
+                if (!runCommand("pactl set-sink-volume @DEFAULT_SINK@ -5%")) {
+                    runCommand("amixer set Master 5%-")
+                }
+            }
+            "VOLUME_MUTE"      -> {
+                if (!runCommand("pactl set-sink-mute @DEFAULT_SINK@ toggle")) {
+                    runCommand("amixer set Master toggle")
+                }
+            }
             "LOG" -> {
                 println("[GamepadPlayground] Mapped button fired: $actionId")
             }
             else -> {}
+        }
+    }
+
+    private fun runCommand(cmd: String): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec(cmd.split(" ").toTypedArray())
+            process.waitFor() == 0
+        } catch (e: Exception) {
+            false
         }
     }
 }
