@@ -40,41 +40,142 @@ import kotlinx.datetime.toLocalDateTime
 // ─────────────────────────────────────────────────────────────────────────────
 // Navigation Screen States
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Navigation screen routes for the Personal Finance feature.
+ */
 sealed interface FinanceScreen {
+    /** The aggregate year-to-date overview screen displaying yearly totals, savings, and monthly list cards. */
     object Overview : FinanceScreen
+
+    /**
+     * The detailed sub-view for a single month, showing granular category totals, presets, and individual transactions.
+     *
+     * @property year The active calendar year of the budget (e.g. 2026).
+     * @property monthIndex The 1-based calendar index of the month (1 for January, 12 for December).
+     */
     data class MonthDetails(val year: Int, val monthIndex: Int) : FinanceScreen
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Domain Models
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Template config for recurring baseline expenses that populate automatically at the start of each month.
+ *
+ * @property id Unique identifier of the template.
+ * @property label User-facing descriptor of the expense (e.g., "Rent", "Broadband").
+ * @property defaultAmount The baseline amount in Indian Rupees (₹).
+ * @property category The expense segment category this template falls into.
+ */
 data class RecurringTemplate(val id: String, val label: String, val defaultAmount: Double, val category: ExpenseCategory)
+
+/**
+ * Shared bill split configuration mapping expenses split with a partner or roommate.
+ *
+ * @property partnerName Name of the split partner.
+ * @property totalAmount Total original amount of the transaction before split.
+ * @property sharePercent The partner's percentage share of the bill.
+ * @property paidByMe True if I paid the bill and partner owes me; false if partner paid and I owe partner.
+ */
 data class SplitBill(val partnerName: String, val totalAmount: Double, val sharePercent: Double, val paidByMe: Boolean)
+
+/**
+ * Domain model representing a single logged expense transaction.
+ *
+ * @property id Unique identifier of the expense item.
+ * @property label Description of the transaction.
+ * @property amount Final calculated share amount in Indian Rupees (₹) charged to this budget.
+ * @property category Expense category classification.
+ * @property isFromTemplate True if this item was auto-populated from a recurring template.
+ * @property foreignAmount Original amount in foreign currency, if logged abroad.
+ * @property foreignCurrency Three-letter currency code (e.g. "USD", "EUR").
+ * @property exchangeRate Conversion rate factor used (foreignAmount * exchangeRate = amount).
+ * @property partnerSplit Split configuration details if the bill is shared.
+ */
 data class ExpenseItem(
     val id: String, val label: String, val amount: Double, val category: ExpenseCategory,
     val isFromTemplate: Boolean = false, val foreignAmount: Double? = null,
     val foreignCurrency: String? = null, val exchangeRate: Double? = null,
     val partnerSplit: SplitBill? = null
 )
+
+/**
+ * Domain model representing a source of income.
+ *
+ * @property id Unique identifier of the income source.
+ * @property label Description of the source (e.g., "Monthly Salary", "Freelance Gig").
+ * @property amount Value of the income transaction in Indian Rupees (₹).
+ */
 data class IncomeItem(val id: String, val label: String, val amount: Double)
+
+/**
+ * Domain model representing a savings target/milestone.
+ *
+ * @property id Unique identifier of the savings goal.
+ * @property label Name of the savings goal (e.g., "New GPU Upgrade").
+ * @property target Total budget target to save.
+ * @property saved The amount saved so far (coerced to target).
+ */
 data class SavingsGoal(val id: String, val label: String, val target: Double, var saved: Double)
+
+/**
+ * Monthly bill payment reminder tracker.
+ *
+ * @property id Unique identifier of the reminder.
+ * @property label Description of the bill (e.g., "Electricity Bill").
+ * @property dueDay The calendar day of the month this bill is due.
+ * @property isPaid True if marked paid for the active month.
+ */
 data class BillReminder(val id: String, val label: String, val dueDay: Int, val isPaid: Boolean)
 
+/**
+ * Categories classification for transactions.
+ *
+ * @property label User-facing text descriptor.
+ * @property color Display accent theme color.
+ * @property icon Emoji symbol mapping.
+ */
 enum class ExpenseCategory(val label: String, val color: Color, val icon: String) {
+    /** Housing rent, mortgage payments, or property maintenance. */
     HOUSING("Housing",   Color(0xFF7C6AFF), "🏠"),
+    /** Utilities like electricity, water, internet, and hosting services. */
     UTILITIES("Utilities", Color(0xFF00D2FF), "⚡"),
+    /** Transport, cabs, autos, fuel, or vehicle maintenance. */
     TRANSPORT("Transport", Color(0xFF00FFCC), "🚗"),
+    /** Food, groceries, cafes, snacks, or restaurants. */
     FOOD("Food",        Color(0xFF10B981), "🍔"),
+    /** Leisure, movies, concerts, subscriptions, or gym memberships. */
     FUN("Leisure",      Color(0xFFFF5370), "🎉"),
+    /** Miscellaneous expenses not fitting other categories. */
     OTHER("Other",      Color(0xFFFFAA00), "📦")
 }
 
+/**
+ * The budget ledger of a specific month.
+ *
+ * Holds limits, category warnings, expenses, income sources, and bills.
+ *
+ * @property year Calendar year mapping.
+ * @property monthIndex 1-based index mapping.
+ * @property monthName Full localized name of the month (e.g. "January").
+ * @property limit Total monthly budget spend warning threshold.
+ * @property expenses List of logged expenses.
+ * @property incomes List of monthly income transactions.
+ * @property billReminders List of bill reminders.
+ * @property categoryLimits Warning thresholds mapped per category (optional).
+ */
 data class MonthBudget(
     val year: Int, val monthIndex: Int, val monthName: String, val limit: Double,
     val expenses: List<ExpenseItem>, val incomes: List<IncomeItem>,
     val billReminders: List<BillReminder>, val categoryLimits: Map<ExpenseCategory, Double> = emptyMap()
 )
+
+/** Preset template used to quickly add common expenses with one click. */
 data class PresetExpense(val label: String, val amount: Double, val category: ExpenseCategory)
+
+/** Autocomplete query index mapping common keywords to preset categories and default amounts. */
 data class AutocompleteItem(val query: String, val label: String, val category: ExpenseCategory, val defaultAmount: Double)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,6 +196,15 @@ private val TextMuted      = Color(0x55FFFFFF)
 // ─────────────────────────────────────────────────────────────────────────────
 // Glass Card helper (inline, avoids cross-package import)
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * A container representing a frosted glass card using radial glows and animated shimmers.
+ *
+ * @param modifier Layout modifiers.
+ * @param shape Corner radius shape definition.
+ * @param borderColor Glass border highlight color.
+ * @param shimmer If true, applies a slow horizontal metallic light sweep animation.
+ * @param content Nested layout children.
+ */
 @Composable
 private fun GlassCard(
     modifier: Modifier = Modifier,
@@ -133,6 +243,19 @@ private fun GlassCard(
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Main Personal Finance Budget Manager dashboard screen.
+ *
+ * Orchestrates:
+ * - Navigation between Year/Month aggregate overviews and item details views.
+ * - Transactions management (variable, templates, splits, and currency conversion).
+ * - Target allocations towards custom Savings Goals.
+ * - Interactive financial "What-If" Sandbox simulator.
+ * - CSV ledger exporting.
+ *
+ * @param onBack Callback invoked to navigate back to the main launcher screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetManagerScreen(onBack: () -> Unit) {
@@ -1060,6 +1183,11 @@ fun BudgetManagerScreen(onBack: () -> Unit) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Glass TextField Colors helper
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns a customized [OutlinedTextFieldDefaults.colors] configuration that fits
+ * the glassmorphic ambient UI theme.
+ */
 @Composable
 private fun glassTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor   = AccentEmerald,
@@ -1076,6 +1204,16 @@ private fun glassTextFieldColors() = OutlinedTextFieldDefaults.colors(
 // ─────────────────────────────────────────────────────────────────────────────
 // YearlyProgressCard — animated hero ring
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Renders the annual budget progress card with a circular progress ring and cash flow summary.
+ *
+ * Calculates spending ratios and cash flow (Surplus vs Deficit) along with annual savings rates.
+ *
+ * @param yearlyTotal Spent total across the active year.
+ * @param yearlyLimit Total annual threshold limit.
+ * @param yearlyIncome Total accumulated income across the active year.
+ */
 @Composable
 fun YearlyProgressCard(yearlyTotal: Double, yearlyLimit: Double, yearlyIncome: Double) {
     val ratio      = (yearlyTotal / yearlyLimit).toFloat().coerceIn(0f, 1f)
@@ -1138,6 +1276,12 @@ fun YearlyProgressCard(yearlyTotal: Double, yearlyLimit: Double, yearlyIncome: D
 // ─────────────────────────────────────────────────────────────────────────────
 // SavingsGoalRow — animated spring progress bar
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Renders a row displaying a savings goal item, featuring a smooth bouncy spring progress bar.
+ *
+ * @param goal The target savings model being displayed.
+ */
 @Composable
 private fun SavingsGoalRow(goal: SavingsGoal) {
     val progress = (goal.saved / goal.target).toFloat().coerceIn(0f, 1f)
@@ -1163,6 +1307,16 @@ private fun SavingsGoalRow(goal: SavingsGoal) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FinanceBadgeChip — M3 Expressive badge pill
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Display badge widget for milestones, highlighting items if they are currently active.
+ *
+ * @param icon The emoji icon descriptor.
+ * @param label Badge label details.
+ * @param isActive True if this achievement milestone is unlocked.
+ * @param activeColor Accent color to highlight the border and label.
+ * @param modifier Layout modifiers.
+ */
 @Composable
 fun FinanceBadgeChip(icon: String, label: String, isActive: Boolean, activeColor: Color, modifier: Modifier = Modifier) {
     val scale by animateFloatAsState(if (isActive) 1.04f else 1f, animationSpec = spring(Spring.DampingRatioMediumBouncy), label = "chip-scale")
@@ -1183,6 +1337,22 @@ fun FinanceBadgeChip(icon: String, label: String, isActive: Boolean, activeColor
 // ─────────────────────────────────────────────────────────────────────────────
 // MonthOverviewCard — glass card with animated progress
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Dashboard card representing a single month's finances summary.
+ *
+ * Shows limit usage ratios with a custom progress bar, income highlights,
+ * pending bill reminder states, and category sub-limit warning triggers.
+ *
+ * @param monthBudget Month budget model item.
+ * @param isCurrent True if this represents the current real-time month.
+ * @param spent Calculated expenses total for the month.
+ * @param income Calculated income total.
+ * @param onClick Invoked when clicking the card to drill down into monthly details.
+ * @param onIncomeClick Invoked to open the Income Manager dialogues.
+ * @param onReminderClick Invoked to view the Bill Reminder checkbox list.
+ * @param onSubLimitClick Invoked to configure Category Sub-Limits.
+ */
 @Composable
 fun MonthOverviewCard(
     monthBudget: MonthBudget, isCurrent: Boolean, spent: Double, income: Double,
@@ -1242,6 +1412,16 @@ fun MonthOverviewCard(
 // ─────────────────────────────────────────────────────────────────────────────
 // BurnRateBanner — expressive warning / safe banner
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Warning / status banner indicating whether current daily spending averages
+ * project that the month will end over budget limits.
+ *
+ * @param isWarning True if projected month end exceeds limits.
+ * @param avgDaily Calculated daily spend velocity average.
+ * @param projected Estimated total spend if current velocity continues for 30 days.
+ * @param limit Total warning threshold.
+ */
 @Composable
 private fun BurnRateBanner(isWarning: Boolean, avgDaily: Double, projected: Double, limit: Double) {
     val pulseAnim by rememberInfiniteTransition(label = "pulse").animateFloat(
@@ -1266,6 +1446,18 @@ private fun BurnRateBanner(isWarning: Boolean, avgDaily: Double, projected: Doub
 // ─────────────────────────────────────────────────────────────────────────────
 // ExpenseRowItem — glass row with category accent square
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Itemized list row displaying a single logged expense transaction.
+ *
+ * Shows description tags (Recurring/Variable), partner bill split share rates,
+ * original foreign exchange conversions, or fallback logging modes.
+ *
+ * @param item The transaction detail model.
+ * @param onEditClick Invoked to open the transaction editor dialogue.
+ * @param onDeleteClick Invoked to delete this item from the active month.
+ * @param isWarning True if this item's category is currently over warning limit thresholds.
+ */
 @Composable
 fun ExpenseRowItem(item: ExpenseItem, onEditClick: () -> Unit, onDeleteClick: () -> Unit, isWarning: Boolean) {
     GlassCard(
@@ -1308,6 +1500,14 @@ fun ExpenseRowItem(item: ExpenseItem, onEditClick: () -> Unit, onDeleteClick: ()
 // ─────────────────────────────────────────────────────────────────────────────
 // DonutChart
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A canvas-drawn circular donut chart representing category-wise expense distributions.
+ *
+ * @param categoryValues Map containing aggregated expenses mapped per category.
+ * @param totalAmount Total sum of expenses representing 360-degrees sweep.
+ * @param modifier Layout modifiers.
+ */
 @Composable
 fun DonutChart(categoryValues: Map<ExpenseCategory, Double>, totalAmount: Double, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {

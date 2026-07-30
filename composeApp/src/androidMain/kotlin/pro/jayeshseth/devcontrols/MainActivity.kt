@@ -347,6 +347,9 @@ import pro.jayeshseth.devcontrols.ui.PredictiveBackPlaygroundScreen
 import pro.jayeshseth.devcontrols.ui.UsbInspectorScreen
 import pro.jayeshseth.devcontrols.ui.FocusCallsSection
 import pro.jayeshseth.devcontrols.ui.KioskTargetPickerScreen
+import pro.jayeshseth.devcontrols.ui.ButtonMapperScreen
+import pro.jayeshseth.devcontrols.ui.AudioEffectsScreen
+import pro.jayeshseth.devcontrols.ui.MealPlannerScreen
 import pro.jayeshseth.devcontrols.ui.theme.DevControlsTheme
 import pro.jayeshseth.devcontrols.util.ForegroundAppDetector
 import pro.jayeshseth.devcontrols.util.PermissionUtils
@@ -700,6 +703,9 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.PARTICLE_VECTOR -> ParticleVectorScreen(onBack = onBack)
         Route.PRIVACY_GLOW -> PrivacyGlowScreen(onBack = onBack)
         Route.GAMEPAD_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.gamepad.GamepadPlaygroundScreen(onBack = onBack)
+        Route.BUTTON_MAPPER -> ButtonMapperScreen(onBack = onBack)
+        Route.AUDIO_EFFECTS -> AudioEffectsScreen(onBack = onBack)
+        Route.MEAL_PLANNER -> MealPlannerScreen(onBack = onBack)
         else -> {}
     }
 }

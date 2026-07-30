@@ -159,7 +159,37 @@ private fun Section(title: String) =
 fun morphState(interaction: MutableInteractionSource, extra: Float = 0f): Pair<Float, Float> {
     val hovered by interaction.collectIsHoveredAsState()
     val pressed by interaction.collectIsPressedAsState()
-    val target = maxOf(if (pressed) 1f else if (hovered) 0.85f else 0f, extra)
+
+    var tapActive by remember { mutableStateOf(false) }
+    LaunchedEffect(interaction) {
+        var pressMark: TimeSource.Monotonic.ValueTimeMark? = null
+        var job: Job? = null
+        interaction.interactions.collect { i ->
+            when (i) {
+                is PressInteraction.Press -> {
+                    job?.cancel()
+                    pressMark = TimeSource.Monotonic.markNow()
+                    tapActive = false
+                }
+                is PressInteraction.Release -> {
+                    val elapsed = pressMark?.elapsedNow()?.inWholeMilliseconds ?: 0L
+                    if (elapsed < 350) {
+                        tapActive = true
+                        job = launch {
+                            delay(600)
+                            tapActive = false
+                        }
+                    }
+                }
+                is PressInteraction.Cancel -> {
+                    job?.cancel()
+                    tapActive = false
+                }
+            }
+        }
+    }
+
+    val target = maxOf(if (pressed || tapActive) 1f else if (hovered) 0.85f else 0f, extra)
     // A gentle, non-bouncy spring settles more naturally than a fixed tween.
     val amount by animateFloatAsState(
         target,

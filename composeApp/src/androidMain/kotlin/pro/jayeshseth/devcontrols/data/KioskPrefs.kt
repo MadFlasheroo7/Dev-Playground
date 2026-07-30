@@ -26,9 +26,11 @@ class KioskPrefs private constructor(private val context: Context) {
     val targetLabel: Flow<String?> = store.data.map { it[KEY_TARGET_LABEL] }
     val kioskActive: Flow<Boolean> = store.data.map { it[KEY_ACTIVE] ?: false }
     val fastAnimations: Flow<Boolean> = store.data.map { it[KEY_FAST_ANIM] ?: false }
+    val volumeKeyMediaOverride: Flow<Boolean> = store.data.map { it[KEY_VOL_MEDIA_OVERRIDE] ?: false }
 
     suspend fun isKioskActiveOnce(): Boolean = kioskActive.first()
     suspend fun isFastAnimationsOnce(): Boolean = fastAnimations.first()
+    suspend fun isVolumeKeyMediaOverrideOnce(): Boolean = volumeKeyMediaOverride.first()
 
     suspend fun setKioskActive(active: Boolean) {
         store.edit { it[KEY_ACTIVE] = active }
@@ -36,6 +38,10 @@ class KioskPrefs private constructor(private val context: Context) {
 
     suspend fun setFastAnimations(enabled: Boolean) {
         store.edit { it[KEY_FAST_ANIM] = enabled }
+    }
+
+    suspend fun setVolumeKeyMediaOverride(enabled: Boolean) {
+        store.edit { it[KEY_VOL_MEDIA_OVERRIDE] = enabled }
     }
 
     suspend fun setTarget(pkg: String?, label: String?) {
@@ -60,6 +66,7 @@ class KioskPrefs private constructor(private val context: Context) {
         private val KEY_TARGET_LABEL = stringPreferencesKey("kiosk_target_label")
         private val KEY_ACTIVE = booleanPreferencesKey("kiosk_active")
         private val KEY_FAST_ANIM = booleanPreferencesKey("kiosk_fast_animations")
+        private val KEY_VOL_MEDIA_OVERRIDE = booleanPreferencesKey("kiosk_vol_media_override")
 
         @Volatile
         private var instance: KioskPrefs? = null

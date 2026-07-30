@@ -273,6 +273,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("JWT Decoder", Route.JWT_DECODE),
         LabItem("Generators", Route.GENERATORS),
         LabItem("Animation Builder", Route.ANIMATION_BUILDER),
+        LabItem("ComposeVideo { }", Route.COMPOSE_VIDEO),
         LabItem("AI Component Canvas", Route.PROMPT_TO_UI),
         ),
     ),
@@ -451,6 +452,9 @@ val labCategories: List<LabCategoryDef> = listOf(
         "Productivity & Finance",
         listOf(
         LabItem("Budget Manager", Route.BUDGET_MANAGER),
+        LabItem("System Button Mapper", Route.BUTTON_MAPPER),
+        LabItem("System Audio Effects", Route.AUDIO_EFFECTS),
+        LabItem("Meal Planner & Randomizer", Route.MEAL_PLANNER),
         LabItem("Goal & Task Tracker", Route.KANBAN),
         LabItem("Pomodoro Focus Sync", Route.POMODORO),
         LabItem("Habit Grid Tracker", Route.HABIT_TRACKER),

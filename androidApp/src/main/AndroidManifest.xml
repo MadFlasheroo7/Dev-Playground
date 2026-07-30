@@ -6,6 +6,7 @@
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.WATCH_APPOPS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -85,6 +86,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
@@ -280,6 +285,17 @@
             android:name="pro.jayeshseth.devcontrols.service.CustomStatusBarService"
             android:enabled="true"
             android:exported="false" />
+
+        <!-- Audio Effects DSP Service -->
+        <service
+            android:name="pro.jayeshseth.devcontrols.service.AudioEffectsService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="system_audio_effects" />
+        </service>
 
         <!-- Real Notification Listener Service -->
         <service

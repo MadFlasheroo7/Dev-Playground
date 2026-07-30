@@ -159,6 +159,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.AUDIO_SYNC -> pro.jayeshseth.devcontrols.ui.audiolab.AudioSyncScreen(onBack = onBack)
         Route.STANDBY_TRACKER -> pro.jayeshseth.devcontrols.ui.devtools.StandbyTrackerScreen(onBack = onBack)
         Route.ANIMATION_BUILDER -> pro.jayeshseth.devcontrols.ui.devtools.AnimationBuilderScreen(onBack = onBack)
+        Route.COMPOSE_VIDEO -> pro.jayeshseth.devcontrols.ui.composevideo.ComposeVideoScreen(onBack = onBack)
         Route.NEON_DRAW -> pro.jayeshseth.devcontrols.ui.visualfx.NeonGlowBoardScreen(onBack = onBack)
         Route.PROMPT_TO_UI -> pro.jayeshseth.devcontrols.ui.PromptToUiScreen(onBack = onBack)
         Route.BUDGET_MANAGER -> pro.jayeshseth.devcontrols.ui.finance.BudgetManagerScreen(onBack = onBack)
@@ -321,6 +322,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.AUDIO_SYNC,
     Route.STANDBY_TRACKER,
     Route.ANIMATION_BUILDER,
+    Route.COMPOSE_VIDEO,
     Route.NEON_DRAW,
     Route.PROMPT_TO_UI,
     Route.MANDELBROT,
