@@ -42,4 +42,5 @@ android {
 
 dependencies {
     implementation(project(":composeApp"))
+    testImplementation(libs.junit)
 }

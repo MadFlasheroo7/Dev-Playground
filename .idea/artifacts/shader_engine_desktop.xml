@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="shader-engine-desktop">
+    <output-path>$PROJECT_DIR$/shader-engine/build/libs</output-path>
+    <root id="archive" name="shader-engine-desktop.jar">
+      <element id="module-output" name="DevControls.shader-engine.desktopMain" />
+    </root>
+  </artifact>
+</component>

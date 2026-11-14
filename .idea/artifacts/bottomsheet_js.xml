@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="bottomsheet-js">
+    <output-path>$PROJECT_DIR$/bottomsheet/build/libs</output-path>
+    <root id="archive" name="bottomsheet-js.jar">
+      <element id="module-output" name="DevControls.bottomsheet.jsMain" />
+    </root>
+  </artifact>
+</component>

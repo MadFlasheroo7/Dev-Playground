@@ -19,6 +19,7 @@ dependencyResolutionManagement {
     // distribution repository (needed by webpack for the wasm browser bundle).
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        mavenLocal()
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
@@ -51,4 +52,7 @@ rootProject.name = "DevControls"
 include(":androidApp")   // thin com.android.application shell (manifest + applicationId)
 include(":composeApp")   // shared Compose Multiplatform LIBRARY (android+desktop+wasm)
 include(":media")
- 
+include(":shader-engine")
+include(":bottomsheet")
+include(":conference-game")
+include(":audio-studio")

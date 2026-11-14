@@ -34,7 +34,6 @@ kotlin {
     }
     // iOS — declared so iosMain is authored & ready; the iOS app/framework is built on macOS (Xcode),
     // so these targets' compile/link tasks don't run on this Linux host (others are unaffected).
-    iosX64()
     iosArm64()
     iosSimulatorArm64()
     applyDefaultHierarchyTemplate()
@@ -55,6 +54,7 @@ kotlin {
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
+            implementation(libs.kotlinx.datetime)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -70,6 +70,12 @@ kotlin {
             implementation(libs.kotlincrypto.sha1)
             implementation(libs.kotlincrypto.sha2)
             implementation(project(":media"))
+            implementation(project(":shader-engine"))
+            implementation(project(":bottomsheet"))
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.datetime)
         }
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
@@ -88,10 +94,12 @@ kotlin {
             implementation(libs.androidx.glance.appwidget)
             implementation(libs.androidx.glance.material3)
             implementation(libs.androidx.datastore.preferences)
+            implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.libadb.android)
             implementation(libs.sun.security.android)
             implementation(libs.conscrypt.android)
+            implementation(project(":audio-studio"))
         }
     }
 }

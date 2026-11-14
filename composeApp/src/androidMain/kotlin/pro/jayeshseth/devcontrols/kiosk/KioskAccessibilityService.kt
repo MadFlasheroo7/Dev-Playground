@@ -1,12 +1,25 @@
 package pro.jayeshseth.devcontrols.kiosk
 
 import android.accessibilityservice.AccessibilityService
+import android.app.KeyguardManager
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.database.ContentObserver
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
@@ -22,27 +35,21 @@ import pro.jayeshseth.devcontrols.data.DevSettingsRepository
 import pro.jayeshseth.devcontrols.data.ForceDarkPrefs
 import pro.jayeshseth.devcontrols.data.HideDevPrefs
 import pro.jayeshseth.devcontrols.data.KioskPrefs
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraCharacteristics
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
-import android.database.ContentObserver
+import pro.jayeshseth.devcontrols.data.TriggerConfig
+import kotlin.math.abs
 
 /**
- * Multi-purpose accessibility service. Two unrelated behaviours share the same
- * window-state-changed event stream because both react to "a new app came to
- * the foreground":
- *
- * 1. Kiosk relaunch — if Kiosk Mode is active and the user swiped home, bounce
- *    them back to the picked target.
- * 2. Hide Dev — if the foreground app is on the Hide-Dev allow-list, silently
- *    set DEVELOPMENT_SETTINGS_ENABLED and ADB_ENABLED to 0; when a non-target
- *    app comes back, restore the saved values. Mimics Geto-style per-app
- *    dev-options hiding without needing Shizuku.
- * 3. Force Dark — if the foreground app is on the Force-Dark allow-list,
- *    toggle Settings.Secure.accessibility_display_inversion_enabled to 1 to
- *    invert system colours (an effective dark-mode shim for apps without
- *    their own dark theme). Restored on leaving the target app.
+ * Multi-purpose accessibility service handling:
+ * 1. Kiosk relaunch
+ * 2. Hide Dev options & ADB per-app
+ * 3. Force Dark display inversion per-app
+ * 4. Hardware System Button Mapping:
+ *    - Hybrid Power button detection (rapid screen on/off transitions + KEYCODE_POWER)
+ *    - Volume Rocker (double-press & long-press)
+ *    - Volume Chord (simultaneous Vol Up + Vol Down)
+ *    - Headset & Bluetooth media buttons (single, double, long-press)
+ *    - Special keys (Assist, Camera)
+ *    - Haptic feedback & full global/system/app action dispatching.
  */
 class KioskAccessibilityService : AccessibilityService() {
 
@@ -51,14 +58,91 @@ class KioskAccessibilityService : AccessibilityService() {
     @Volatile private var lastRelaunchAt: Long = 0L
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var activeKeyCode: Int = KeyEvent.KEYCODE_UNKNOWN
-    private var isVolumeKeyLongPressed = false
-    private var activeAction: ButtonAction = ButtonAction.DEFAULT
     private var torchActive = false
 
-    private val volumeLongPressRunnable = Runnable {
-        isVolumeKeyLongPressed = true
-        performMappedAction(activeAction)
+    private val torchCallback: CameraManager.TorchCallback? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        object : CameraManager.TorchCallback() {
+            override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+                torchActive = enabled
+            }
+        }
+    } else null
+
+    // ── Power Button Detection State ──────────────────────────────────────────
+    private var lastPowerEventTime = 0L
+    private var lastPowerKeyEventTime = 0L
+    private var powerClickCount = 0
+    private var powerGestureInitialLocked = false
+
+    private val powerClickEvaluator = Runnable {
+        val count = powerClickCount
+        powerClickCount = 0
+        val initialLocked = powerGestureInitialLocked
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+
+        Log.d(TAG, "Evaluating power clicks: count=$count initialLocked=$initialLocked")
+        when {
+            count >= 3 && prefs.cachedPowerTriple.shouldTrigger(initialLocked) -> {
+                performMappedAction(prefs.cachedPowerTriple)
+            }
+            count >= 2 && prefs.cachedPowerDouble.shouldTrigger(initialLocked) -> {
+                performMappedAction(prefs.cachedPowerDouble)
+            }
+        }
+    }
+
+    // ── Volume Rocker & Chord State ───────────────────────────────────────────
+    private var isVolUpPressed = false
+    private var isVolDownPressed = false
+    private var isChordTriggered = false
+
+    private var activeVolKeyCode = KeyEvent.KEYCODE_UNKNOWN
+    private var isVolLongPressed = false
+    private var volPressDownTime = 0L
+    private var isVolDoubleTapCandidate = false
+    private var activeVolLongConfig: TriggerConfig = TriggerConfig()
+
+    private var pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+    private var lastVolUpTapTime = 0L
+    private var lastVolDownTapTime = 0L
+
+    private val volLongPressRunnable = Runnable {
+        isVolLongPressed = true
+        performMappedAction(activeVolLongConfig)
+    }
+
+    private val volSingleTapRunnable = Runnable {
+        val key = pendingVolTapKeyCode
+        pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+        isVolDoubleTapCandidate = false
+        if (key != KeyEvent.KEYCODE_UNKNOWN) {
+            adjustSystemVolume(key)
+        }
+    }
+
+    // ── Headset / Media Key State ─────────────────────────────────────────────
+    private var isHeadsetLongPressed = false
+    private var lastHeadsetTapTime = 0L
+    private var pendingHeadsetSingleTap = false
+
+    private val headsetLongPressRunnable = Runnable {
+        isHeadsetLongPressed = true
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+        val isLocked = isDeviceLockedOrScreenOff()
+        if (prefs.cachedHeadsetLong.shouldTrigger(isLocked)) {
+            performMappedAction(prefs.cachedHeadsetLong)
+        }
+    }
+
+    private val headsetSingleTapRunnable = Runnable {
+        pendingHeadsetSingleTap = false
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+        val isLocked = isDeviceLockedOrScreenOff()
+        if (prefs.cachedHeadsetSingle.shouldTrigger(isLocked)) {
+            performMappedAction(prefs.cachedHeadsetSingle)
+        } else {
+            dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+        }
     }
 
     // ── Screen-off volume monitoring ──────────────────────────────────────────
@@ -69,13 +153,6 @@ class KioskAccessibilityService : AccessibilityService() {
     private var screenOffChangeDirection = 0   // +1 = up, -1 = down
     private var screenOffFirstChangeTime = 0L
 
-    /**
-     * Fires whenever the system music volume changes.
-     * When screen is off this is the only way to detect that a volume key was pressed.
-     * We count consecutive same-direction changes within [SCREEN_OFF_WINDOW_MS] ms;
-     * once the count reaches [SCREEN_OFF_LONG_PRESS_STEPS] we treat it as a long-press,
-     * restore the original volume silently, and execute the mapped action.
-     */
     private val volumeContentObserver = object : ContentObserver(mainHandler) {
         override fun onChange(selfChange: Boolean) {
             if (!isScreenOff) return
@@ -83,21 +160,29 @@ class KioskAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** Tracks screen on/off to activate the ContentObserver path only when needed. */
+    /** Tracks screen on/off for power transitions and volume observer */
     private val screenStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val now = SystemClock.uptimeMillis()
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> {
                     isScreenOff = true
                     screenOffLastVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
                     resetScreenOffDetection()
-                    Log.d(TAG, "Screen OFF — volume monitor armed")
+                    Log.d(TAG, "Screen OFF")
+                    // Dedupe if already counted by KEYCODE_POWER in onKeyEvent within 500ms
+                    if (now - lastPowerKeyEventTime >= 500L) {
+                        onPowerClickDetected(fromKeyEvent = false, isScreenOffTransition = true)
+                    }
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOff = false
                     resetScreenOffDetection()
-                    Log.d(TAG, "Screen ON — volume monitor disarmed")
+                    Log.d(TAG, "Screen ON")
+                    if (now - lastPowerKeyEventTime >= 500L) {
+                        onPowerClickDetected(fromKeyEvent = false, isScreenOffTransition = false)
+                    }
                 }
             }
         }
@@ -106,9 +191,8 @@ class KioskAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        Log.d(TAG, "service connected. launchers=$launcherPackages")
-        // Sync initial screen state in case service starts while screen is already off
-        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        Log.d(TAG, "Service connected. Launchers=$launcherPackages")
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         isScreenOff = !pm.isInteractive
         if (isScreenOff) {
             screenOffLastVolume = (getSystemService(Context.AUDIO_SERVICE) as AudioManager)
@@ -126,7 +210,6 @@ class KioskAccessibilityService : AccessibilityService() {
 
         val pkg = event.packageName?.toString() ?: return
 
-        // Ignore our own UI and the system shade for both handlers.
         if (pkg == packageName) return
         if (pkg.isSystemUi()) return
 
@@ -139,9 +222,520 @@ class KioskAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         teardownScreenOffMonitoring()
+        mainHandler.removeCallbacksAndMessages(null)
         if (instance === this) instance = null
         super.onDestroy()
     }
+
+    private fun isDeviceLockedOrScreenOff(): Boolean {
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return km.isKeyguardLocked || !pm.isInteractive
+    }
+
+    // ── Power Click Detection ─────────────────────────────────────────────────
+
+    private fun onPowerClickDetected(fromKeyEvent: Boolean, isScreenOffTransition: Boolean = false) {
+        val now = SystemClock.uptimeMillis()
+        if (fromKeyEvent) {
+            lastPowerKeyEventTime = now
+        }
+
+        if (now - lastPowerEventTime < POWER_DEDUPE_WINDOW_MS) {
+            return
+        }
+        lastPowerEventTime = now
+
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+
+        if (powerClickCount == 0) {
+            // Capture lock state at the start of the power click gesture sequence
+            powerGestureInitialLocked = if (fromKeyEvent) {
+                isDeviceLockedOrScreenOff()
+            } else if (isScreenOffTransition) {
+                // Transitioning from screen ON to OFF; check if keyguard was locked before transition
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                km.isKeyguardLocked
+            } else {
+                // Transitioning from screen OFF to ON; device was off/locked
+                true
+            }
+        }
+
+        val initialLocked = powerGestureInitialLocked
+        val hasDouble = prefs.cachedPowerDouble.shouldTrigger(initialLocked)
+        val hasTriple = prefs.cachedPowerTriple.shouldTrigger(initialLocked)
+
+        if (!hasDouble && !hasTriple) {
+            powerClickCount = 0
+            return
+        }
+
+        powerClickCount++
+        mainHandler.removeCallbacks(powerClickEvaluator)
+
+        if (powerClickCount >= 3 && hasTriple) {
+            powerClickCount = 0
+            performMappedAction(prefs.cachedPowerTriple)
+        } else {
+            mainHandler.postDelayed(powerClickEvaluator, POWER_WINDOW_MS)
+        }
+    }
+
+    // ── Hardware Key Event Interception ───────────────────────────────────────
+
+    override fun onKeyEvent(event: KeyEvent?): Boolean {
+        event ?: return false
+        val keyCode = event.keyCode
+        val action = event.action
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+        val isLocked = isDeviceLockedOrScreenOff()
+
+        // 1. Power Button
+        if (keyCode == KeyEvent.KEYCODE_POWER) {
+            if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                onPowerClickDetected(fromKeyEvent = true)
+            }
+            val hasCustom = prefs.cachedPowerDouble.shouldTrigger(isLocked) ||
+                prefs.cachedPowerTriple.shouldTrigger(isLocked)
+            return if (hasCustom) true else super.onKeyEvent(event)
+        }
+
+        // 2. Volume Buttons & Volume Chord
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) {
+                    if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) isVolUpPressed = true
+                    if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) isVolDownPressed = true
+
+                    // Check simultaneous Volume Chord
+                    if (isVolUpPressed && isVolDownPressed) {
+                        isChordTriggered = true
+                        mainHandler.removeCallbacks(volLongPressRunnable)
+                        mainHandler.removeCallbacks(volSingleTapRunnable)
+                        pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                        isVolDoubleTapCandidate = false
+                        if (prefs.cachedVolChord.shouldTrigger(isLocked)) {
+                            performMappedAction(prefs.cachedVolChord)
+                        }
+                        return true
+                    }
+
+                    val longConfig = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) prefs.cachedVolUpLong else prefs.cachedVolDownLong
+                    val doubleConfig = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) prefs.cachedVolUpDouble else prefs.cachedVolDownDouble
+                    val chordActive = prefs.cachedVolChord.shouldTrigger(isLocked)
+
+                    val hasCustomAction = longConfig.shouldTrigger(isLocked) ||
+                        doubleConfig.shouldTrigger(isLocked) ||
+                        chordActive
+
+                    if (!hasCustomAction) {
+                        return super.onKeyEvent(event)
+                    }
+
+                    // If a single-tap was pending for this key, cancel its timer so it doesn't fire while held down
+                    if (pendingVolTapKeyCode == keyCode) {
+                        mainHandler.removeCallbacks(volSingleTapRunnable)
+                        isVolDoubleTapCandidate = true
+                    } else {
+                        isVolDoubleTapCandidate = false
+                    }
+
+                    activeVolKeyCode = keyCode
+                    isVolLongPressed = false
+                    volPressDownTime = SystemClock.uptimeMillis()
+
+                    if (longConfig.shouldTrigger(isLocked)) {
+                        activeVolLongConfig = longConfig
+                        mainHandler.removeCallbacks(volLongPressRunnable)
+                        mainHandler.postDelayed(volLongPressRunnable, LONG_PRESS_TIMEOUT_MS)
+                    }
+                    return true
+                } else {
+                    // Repeat events
+                    val longConfig = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) prefs.cachedVolUpLong else prefs.cachedVolDownLong
+                    if (!longConfig.shouldTrigger(isLocked) && !isChordTriggered) {
+                        adjustSystemVolume(keyCode)
+                        return true
+                    }
+                    return isChordTriggered || isVolLongPressed || (activeVolKeyCode == keyCode)
+                }
+            } else if (action == KeyEvent.ACTION_UP) {
+                mainHandler.removeCallbacks(volLongPressRunnable)
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) isVolUpPressed = false
+                if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) isVolDownPressed = false
+
+                if (isChordTriggered) {
+                    if (!isVolUpPressed && !isVolDownPressed) {
+                        isChordTriggered = false
+                    }
+                    return true
+                }
+
+                if (activeVolKeyCode == keyCode) {
+                    activeVolKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                    if (isVolLongPressed) {
+                        isVolLongPressed = false
+                        isVolDoubleTapCandidate = false
+                        pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                        return true
+                    }
+
+                    val now = SystemClock.uptimeMillis()
+                    val pressDuration = now - volPressDownTime
+
+                    // If button was held down past LONG_PRESS_TIMEOUT_MS, it is not a tap
+                    if (pressDuration > LONG_PRESS_TIMEOUT_MS) {
+                        isVolDoubleTapCandidate = false
+                        pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                        return true
+                    }
+
+                    // Short release: check for double tap
+                    val doubleConfig = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) prefs.cachedVolUpDouble else prefs.cachedVolDownDouble
+                    if (doubleConfig.shouldTrigger(isLocked)) {
+                        val lastTap = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) lastVolUpTapTime else lastVolDownTapTime
+                        if (isVolDoubleTapCandidate || (now - lastTap <= DOUBLE_TAP_WINDOW_MS && pendingVolTapKeyCode == keyCode)) {
+                            // Double-press confirmed!
+                            mainHandler.removeCallbacks(volSingleTapRunnable)
+                            pendingVolTapKeyCode = KeyEvent.KEYCODE_UNKNOWN
+                            isVolDoubleTapCandidate = false
+                            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) lastVolUpTapTime = 0L else lastVolDownTapTime = 0L
+                            performMappedAction(doubleConfig)
+                            return true
+                        } else {
+                            // First tap recorded
+                            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) lastVolUpTapTime = now else lastVolDownTapTime = now
+                            pendingVolTapKeyCode = keyCode
+                            isVolDoubleTapCandidate = false
+                            mainHandler.removeCallbacks(volSingleTapRunnable)
+                            mainHandler.postDelayed(volSingleTapRunnable, DOUBLE_TAP_WINDOW_MS)
+                            return true
+                        }
+                    } else {
+                        // Double-tap not configured: immediately adjust volume without waiting
+                        isVolDoubleTapCandidate = false
+                        adjustSystemVolume(keyCode)
+                        return true
+                    }
+                }
+            }
+            return super.onKeyEvent(event)
+        }
+
+        // 3. Headset / Media Buttons
+        if (keyCode == KeyEvent.KEYCODE_HEADSETHOOK ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ||
+            keyCode == KeyEvent.KEYCODE_MEDIA_PAUSE
+        ) {
+            val hasSingle = prefs.cachedHeadsetSingle.shouldTrigger(isLocked)
+            val hasDouble = prefs.cachedHeadsetDouble.shouldTrigger(isLocked)
+            val hasLong = prefs.cachedHeadsetLong.shouldTrigger(isLocked)
+
+            if (!hasSingle && !hasDouble && !hasLong) {
+                return super.onKeyEvent(event)
+            }
+
+            if (action == KeyEvent.ACTION_DOWN) {
+                if (event.repeatCount == 0) {
+                    isHeadsetLongPressed = false
+                    // If a single tap was pending, cancel the runnable so it won't fire during the second tap
+                    if (pendingHeadsetSingleTap) {
+                        mainHandler.removeCallbacks(headsetSingleTapRunnable)
+                    }
+                    if (hasLong) {
+                        mainHandler.removeCallbacks(headsetLongPressRunnable)
+                        mainHandler.postDelayed(headsetLongPressRunnable, LONG_PRESS_TIMEOUT_MS)
+                    }
+                    return true
+                }
+                return isHeadsetLongPressed
+            } else if (action == KeyEvent.ACTION_UP) {
+                mainHandler.removeCallbacks(headsetLongPressRunnable)
+                if (isHeadsetLongPressed) {
+                    isHeadsetLongPressed = false
+                    pendingHeadsetSingleTap = false
+                    return true
+                }
+
+                if (hasDouble) {
+                    val now = SystemClock.uptimeMillis()
+                    if (pendingHeadsetSingleTap && now - lastHeadsetTapTime <= DOUBLE_TAP_WINDOW_MS) {
+                        mainHandler.removeCallbacks(headsetSingleTapRunnable)
+                        pendingHeadsetSingleTap = false
+                        lastHeadsetTapTime = 0L
+                        performMappedAction(prefs.cachedHeadsetDouble)
+                        return true
+                    } else {
+                        lastHeadsetTapTime = now
+                        pendingHeadsetSingleTap = true
+                        mainHandler.removeCallbacks(headsetSingleTapRunnable)
+                        mainHandler.postDelayed(headsetSingleTapRunnable, DOUBLE_TAP_WINDOW_MS)
+                        return true
+                    }
+                } else if (hasSingle) {
+                    performMappedAction(prefs.cachedHeadsetSingle)
+                    return true
+                }
+            }
+            return super.onKeyEvent(event)
+        }
+
+        // 4. Special Keys: Assist & Camera
+        if (keyCode == KeyEvent.KEYCODE_ASSIST || keyCode == KeyEvent.KEYCODE_VOICE_ASSIST) {
+            if (prefs.cachedAssistKey.shouldTrigger(isLocked)) {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    performMappedAction(prefs.cachedAssistKey)
+                }
+                return true
+            }
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_CAMERA) {
+            if (prefs.cachedCameraKey.shouldTrigger(isLocked)) {
+                if (action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    performMappedAction(prefs.cachedCameraKey)
+                }
+                return true
+            }
+        }
+
+        return super.onKeyEvent(event)
+    }
+
+    // ── Action Dispatcher ─────────────────────────────────────────────────────
+
+    private fun performMappedAction(config: TriggerConfig) {
+        if (config.action == ButtonAction.DEFAULT) return
+        val prefs = ButtonMapperPrefs.get(applicationContext)
+        if (prefs.cachedHapticFeedback) {
+            performHapticFeedback()
+        }
+        Log.d(TAG, "Executing mapped action: ${config.action.name}")
+        when (config.action) {
+            ButtonAction.DEFAULT -> {}
+            // Global Accessibility Actions
+            ButtonAction.SCREENSHOT -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+                }
+            }
+            ButtonAction.NOTIFICATIONS -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            ButtonAction.QUICK_SETTINGS -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+            ButtonAction.LOCK_SCREEN -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+                }
+            }
+            ButtonAction.RECENTS -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            ButtonAction.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
+            ButtonAction.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
+            ButtonAction.POWER_DIALOG -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            ButtonAction.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+
+            // Sound & Device Controls
+            ButtonAction.CYCLE_RINGER -> cycleRingerMode()
+            ButtonAction.TOGGLE_DND -> toggleDoNotDisturb()
+            ButtonAction.TOGGLE_AUTO_ROTATE -> toggleAutoRotate()
+            ButtonAction.TOGGLE_FLASHLIGHT -> toggleFlashlight()
+            ButtonAction.TOGGLE_MUTE -> toggleAudioMute()
+            ButtonAction.PLAY_PAUSE -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            ButtonAction.SKIP_NEXT -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
+            ButtonAction.SKIP_PREV -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+
+            // App Launch Shortcuts
+            ButtonAction.LAUNCH_CAMERA -> launchCamera()
+            ButtonAction.OPEN_ASSISTANT -> openAssistant()
+            ButtonAction.LAUNCH_APP -> launchCustomApp(config.extraPackage)
+
+            // Developer Tools
+            ButtonAction.OPEN_DEV_OPTIONS -> openDeveloperOptions()
+        }
+    }
+
+    private fun performHapticFeedback() {
+        runCatching {
+            @Suppress("DEPRECATION")
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vm?.defaultVibrator ?: (getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
+            } else {
+                getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+            if (vibrator?.hasVibrator() == true) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(
+                        VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(50)
+                }
+            }
+        }.onFailure { Log.w(TAG, "Haptic vibration failed", it) }
+    }
+
+    private fun cycleRingerMode() {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val hasDndPermission = nm.isNotificationPolicyAccessGranted
+        runCatching {
+            val nextMode = when (am.ringerMode) {
+                AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                AudioManager.RINGER_MODE_VIBRATE -> {
+                    if (hasDndPermission) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+                }
+                else -> AudioManager.RINGER_MODE_NORMAL
+            }
+            am.ringerMode = nextMode
+        }.onFailure { Log.w(TAG, "Failed to cycle ringer mode", it) }
+    }
+
+    private fun toggleDoNotDisturb() {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.isNotificationPolicyAccessGranted) {
+            val current = nm.currentInterruptionFilter
+            val target = if (current == NotificationManager.INTERRUPTION_FILTER_ALL) {
+                NotificationManager.INTERRUPTION_FILTER_PRIORITY
+            } else {
+                NotificationManager.INTERRUPTION_FILTER_ALL
+            }
+            runCatching { nm.setInterruptionFilter(target) }
+        } else {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching { startActivity(intent) }
+        }
+    }
+
+    private fun toggleAutoRotate() {
+        val resolver = applicationContext.contentResolver
+        runCatching {
+            val current = Settings.System.getInt(resolver, Settings.System.ACCELEROMETER_ROTATION, 0)
+            val target = if (current == 1) 0 else 1
+            Settings.System.putInt(resolver, Settings.System.ACCELEROMETER_ROTATION, target)
+        }.onFailure { Log.w(TAG, "Failed to toggle auto rotate", it) }
+    }
+
+    private fun launchCamera() {
+        val isLocked = isDeviceLockedOrScreenOff()
+        if (isLocked) {
+            val secureIntent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA_SECURE).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (secureIntent.resolveActivity(packageManager) != null) {
+                val started = runCatching { startActivity(secureIntent); true }.getOrDefault(false)
+                if (started) return
+            }
+        }
+        val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { startActivity(intent) }
+    }
+
+    private fun openAssistant() {
+        val voiceIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { startActivity(voiceIntent) }
+            .onFailure {
+                val assistIntent = Intent(Intent.ACTION_ASSIST).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { startActivity(assistIntent) }
+            }
+    }
+
+    private fun launchCustomApp(pkg: String?) {
+        if (pkg.isNullOrBlank()) return
+        val intent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        }
+        if (intent != null) {
+            runCatching { startActivity(intent) }
+                .onFailure { Log.w(TAG, "Failed to launch custom app: $pkg", it) }
+        }
+    }
+
+    private fun openDeveloperOptions() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { startActivity(intent) }
+    }
+
+    private fun dispatchMediaKey(mediaKeyCode: Int) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, mediaKeyCode)
+        val upEvent = KeyEvent(KeyEvent.ACTION_UP, mediaKeyCode)
+        audioManager.dispatchMediaKeyEvent(downEvent)
+        audioManager.dispatchMediaKeyEvent(upEvent)
+    }
+
+    private fun toggleFlashlight() {
+        val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        try {
+            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                val characteristics = cameraManager.getCameraCharacteristics(id)
+                characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+            if (cameraId != null) {
+                torchActive = !torchActive
+                cameraManager.setTorchMode(cameraId, torchActive)
+                Log.d(TAG, "Flashlight toggled to: $torchActive")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling flashlight", e)
+        }
+    }
+
+    private fun toggleAudioMute() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC) || current == 0
+                if (isMuted) {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
+                    if (audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) == 0) {
+                        val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (max / 4).coerceAtLeast(1), AudioManager.FLAG_SHOW_UI)
+                    }
+                } else {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+                }
+            } else {
+                val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                if (current > 0) {
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
+                } else {
+                    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, max / 3, AudioManager.FLAG_SHOW_UI)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling audio mute", e)
+        }
+    }
+
+    private fun adjustSystemVolume(keyCode: Int) {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val direction = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            AudioManager.ADJUST_RAISE
+        } else {
+            AudioManager.ADJUST_LOWER
+        }
+        audioManager.adjustStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            direction,
+            AudioManager.FLAG_SHOW_UI
+        )
+    }
+
+    // ── Kiosk / HideDev / ForceDark Handlers ───────────────────────────────────
 
     private fun handleKiosk(pkg: String) {
         val prefs = KioskPrefs.get(applicationContext)
@@ -164,7 +758,7 @@ class KioskAccessibilityService : AccessibilityService() {
                 Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         )
         runCatching { startActivity(launch) }
-            .onFailure { Log.w(TAG, "kiosk relaunch failed", it) }
+            .onFailure { Log.w(TAG, "Kiosk relaunch failed", it) }
     }
 
     private fun handleHideDev(pkg: String) {
@@ -240,155 +834,6 @@ class KioskAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onKeyEvent(event: KeyEvent?): Boolean {
-        event ?: return false
-        val keyCode = event.keyCode
-        if (keyCode != KeyEvent.KEYCODE_VOLUME_UP && keyCode != KeyEvent.KEYCODE_VOLUME_DOWN) {
-            return super.onKeyEvent(event)
-        }
-
-        val action = event.action
-        // Use the cached prefs — no blocking or coroutines needed on the main thread
-        val mapperPrefs = ButtonMapperPrefs.get(applicationContext)
-
-        if (action == KeyEvent.ACTION_DOWN) {
-            if (event.repeatCount == 0) {
-                // Determine if locked — purely synchronous calls, no blocking
-                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
-                val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
-                val isLocked = km.isKeyguardLocked || !pm.isInteractive
-
-                // Read from in-memory cache — instant, no deadlock
-                // Fallback: if this state's action is DEFAULT, try the other state's action.
-                // This means configuring a "Locked" action also applies when Unlocked
-                // unless an explicit Unlocked action is separately configured.
-                val buttonAction = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                    val locked = mapperPrefs.cachedVolUpLocked
-                    val unlocked = mapperPrefs.cachedVolUpUnlocked
-                    if (isLocked) {
-                        locked.takeIf { it != ButtonAction.DEFAULT } ?: unlocked
-                    } else {
-                        unlocked.takeIf { it != ButtonAction.DEFAULT } ?: locked
-                    }
-                } else {
-                    val locked = mapperPrefs.cachedVolDownLocked
-                    val unlocked = mapperPrefs.cachedVolDownUnlocked
-                    if (isLocked) {
-                        locked.takeIf { it != ButtonAction.DEFAULT } ?: unlocked
-                    } else {
-                        unlocked.takeIf { it != ButtonAction.DEFAULT } ?: locked
-                    }
-                }
-                Log.d(TAG, "Vol key $keyCode | isLocked=$isLocked → action=${buttonAction.name}")
-
-                activeAction = buttonAction
-                activeKeyCode = keyCode
-                isVolumeKeyLongPressed = false
-
-                if (buttonAction == ButtonAction.DEFAULT) {
-                    // Pass through — let system handle volume normally
-                    return false
-                }
-
-                // Intercept: schedule long-press detection
-                mainHandler.removeCallbacks(volumeLongPressRunnable)
-                mainHandler.postDelayed(volumeLongPressRunnable, 500L)
-                return true
-            } else {
-                // Repeat events for held key — only consume if we own this press
-                return activeAction != ButtonAction.DEFAULT
-            }
-        } else if (action == KeyEvent.ACTION_UP) {
-            mainHandler.removeCallbacks(volumeLongPressRunnable)
-            if (activeKeyCode == keyCode) {
-                activeKeyCode = KeyEvent.KEYCODE_UNKNOWN
-                if (activeAction != ButtonAction.DEFAULT) {
-                    if (!isVolumeKeyLongPressed) {
-                        // Short tap on a remapped key → still adjust volume normally
-                        adjustSystemVolume(keyCode)
-                    }
-                    return true
-                }
-            }
-        }
-        return super.onKeyEvent(event)
-    }
-
-    private fun performMappedAction(action: ButtonAction) {
-        Log.d(TAG, "Executing mapped action: ${action.name}")
-        when (action) {
-            ButtonAction.PLAY_PAUSE -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
-            ButtonAction.SKIP_NEXT -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT)
-            ButtonAction.SKIP_PREV -> dispatchMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
-            ButtonAction.TOGGLE_FLASHLIGHT -> toggleFlashlight()
-            ButtonAction.TOGGLE_MUTE -> toggleAudioMute()
-            else -> {}
-        }
-    }
-
-    private fun dispatchMediaKey(mediaKeyCode: Int) {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, mediaKeyCode)
-        val upEvent = KeyEvent(KeyEvent.ACTION_UP, mediaKeyCode)
-        audioManager.dispatchMediaKeyEvent(downEvent)
-        audioManager.dispatchMediaKeyEvent(upEvent)
-    }
-
-    private fun toggleFlashlight() {
-        val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        try {
-            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
-                val characteristics = cameraManager.getCameraCharacteristics(id)
-                characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-            }
-            if (cameraId != null) {
-                torchActive = !torchActive
-                cameraManager.setTorchMode(cameraId, torchActive)
-                Log.d(TAG, "Flashlight toggled to: $torchActive")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error toggling flashlight", e)
-        }
-    }
-
-    private fun toggleAudioMute() {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
-                audioManager.adjustStreamVolume(
-                    AudioManager.STREAM_MUSIC,
-                    if (isMuted) AudioManager.ADJUST_UNMUTE else AudioManager.ADJUST_MUTE,
-                    AudioManager.FLAG_SHOW_UI
-                )
-            } else {
-                val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                if (current > 0) {
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
-                } else {
-                    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, max / 3, AudioManager.FLAG_SHOW_UI)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error toggling audio mute", e)
-        }
-    }
-
-    private fun adjustSystemVolume(keyCode: Int) {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val direction = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            AudioManager.ADJUST_RAISE
-        } else {
-            AudioManager.ADJUST_LOWER
-        }
-        audioManager.adjustStreamVolume(
-            AudioManager.STREAM_MUSIC,
-            direction,
-            AudioManager.FLAG_SHOW_UI
-        )
-    }
-
     private fun String.isSystemUi(): Boolean =
         this == "com.android.systemui" || startsWith("com.android.systemui.")
 
@@ -410,11 +855,23 @@ class KioskAccessibilityService : AccessibilityService() {
             addAction(Intent.ACTION_SCREEN_ON)
         }
         registerReceiver(screenStateReceiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            torchCallback?.let { cb ->
+                val cm = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                runCatching { cm.registerTorchCallback(cb, mainHandler) }
+            }
+        }
     }
 
     private fun teardownScreenOffMonitoring() {
         runCatching { contentResolver.unregisterContentObserver(volumeContentObserver) }
         runCatching { unregisterReceiver(screenStateReceiver) }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            torchCallback?.let { cb ->
+                val cm = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                runCatching { cm.unregisterTorchCallback(cb) }
+            }
+        }
     }
 
     private fun resetScreenOffDetection() {
@@ -423,17 +880,6 @@ class KioskAccessibilityService : AccessibilityService() {
         screenOffFirstChangeTime = 0L
     }
 
-    /**
-     * Called by [volumeContentObserver] whenever the system music volume changes while screen is off.
-     *
-     * Long-press detection algorithm:
-     *  - Tracks consecutive changes in the **same** direction within [SCREEN_OFF_WINDOW_MS] ms.
-     *  - Once [SCREEN_OFF_LONG_PRESS_STEPS] changes are detected the gesture is confirmed.
-     *  - The original volume is silently restored so the user hears no net change.
-     *  - [AudioManager.dispatchMediaKeyEvent] routes the media action directly to whatever
-     *    music app (Spotify, YouTube Music, etc.) currently holds audio focus — no
-     *    MediaSession priority fighting needed.
-     */
     private fun onScreenOffVolumeChanged() {
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val current = am.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -452,7 +898,6 @@ class KioskAccessibilityService : AccessibilityService() {
         val isNewGesture = direction != screenOffChangeDirection || elapsed > SCREEN_OFF_WINDOW_MS
 
         if (isNewGesture) {
-            // Record the volume *before* this first step so we can restore it exactly
             screenOffOriginalVolume = screenOffLastVolume
             screenOffConsecutiveChanges = 1
             screenOffChangeDirection = direction
@@ -464,41 +909,31 @@ class KioskAccessibilityService : AccessibilityService() {
 
         if (screenOffConsecutiveChanges < SCREEN_OFF_LONG_PRESS_STEPS) return
 
-        // ── Long press confirmed ──────────────────────────────────────────────
-        val keyCode = if (direction > 0) KeyEvent.KEYCODE_VOLUME_UP else KeyEvent.KEYCODE_VOLUME_DOWN
         val prefs = ButtonMapperPrefs.get(applicationContext)
-        val action = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            prefs.cachedVolUpLocked.takeIf { it != ButtonAction.DEFAULT } ?: prefs.cachedVolUpUnlocked
-        } else {
-            prefs.cachedVolDownLocked.takeIf { it != ButtonAction.DEFAULT } ?: prefs.cachedVolDownUnlocked
-        }
+        val isLocked = isDeviceLockedOrScreenOff()
+        val config = if (direction > 0) prefs.cachedVolUpLong else prefs.cachedVolDownLong
 
-        if (action == ButtonAction.DEFAULT) return
+        if (!config.shouldTrigger(isLocked)) return
 
-        Log.d(TAG, "Screen-off long press: dir=$direction steps=$screenOffConsecutiveChanges → ${action.name}")
+        Log.d(TAG, "Screen-off long press: dir=$direction steps=$screenOffConsecutiveChanges → ${config.action.name}")
 
-        // Restore volume silently — rawDiff = 0 on next observer call, safe to reset state first
         am.setStreamVolume(AudioManager.STREAM_MUSIC, screenOffOriginalVolume, 0)
         screenOffLastVolume = screenOffOriginalVolume
         resetScreenOffDetection()
 
-        performMappedAction(action)
+        performMappedAction(config)
     }
 
     companion object {
         private const val TAG = "KioskA11y"
         private const val DEBOUNCE_MS = 250L
         private const val INVERSION_KEY = "accessibility_display_inversion_enabled"
-
-        /** Number of consecutive same-direction volume steps to confirm a long-press when screen is off. */
         private const val SCREEN_OFF_LONG_PRESS_STEPS = 3
-
-        /**
-         * Max time window (ms) for all steps of a single long-press gesture.
-         * Key-repeat initial delay is ~500 ms, subsequent repeats ~100 ms,
-         * so 3 steps span ~600 ms. 800 ms gives comfortable headroom.
-         */
         private const val SCREEN_OFF_WINDOW_MS = 800L
+        private const val LONG_PRESS_TIMEOUT_MS = 500L
+        private const val DOUBLE_TAP_WINDOW_MS = 350L
+        private const val POWER_WINDOW_MS = 500L
+        private const val POWER_DEDUPE_WINDOW_MS = 150L
 
         @Volatile
         private var instance: KioskAccessibilityService? = null

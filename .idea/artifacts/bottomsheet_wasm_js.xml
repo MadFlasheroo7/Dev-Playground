@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="bottomsheet-wasm-js">
+    <output-path>$PROJECT_DIR$/bottomsheet/build/libs</output-path>
+    <root id="archive" name="bottomsheet-wasm-js.jar">
+      <element id="module-output" name="DevControls.bottomsheet.wasmJsMain" />
+    </root>
+  </artifact>
+</component>

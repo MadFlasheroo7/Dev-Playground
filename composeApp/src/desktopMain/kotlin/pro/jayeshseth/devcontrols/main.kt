@@ -11,7 +11,10 @@ fun main() = application {
     val windowState = rememberWindowState()
     Window(onCloseRequest = ::exitApplication, state = windowState, title = "DevControls") {
         CompositionLocalProvider(LocalWindowState provides windowState) {
-            AppRoot()
+            val initialRoute = System.getenv("DEVCONTROLS_ROUTE")
+                ?.let { runCatching { pro.jayeshseth.devcontrols.nav.Route.valueOf(it) }.getOrNull() }
+                ?: pro.jayeshseth.devcontrols.nav.Route.MAIN
+            AppRoot(initialRoute = initialRoute)
         }
     }
 }

@@ -44,6 +44,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.scale
+import pro.jayeshseth.bottomnav.BottomNavIndicatorScope
+import pro.jayeshseth.bottomnav.BottomNavPill
 import pro.jayeshseth.bottomnav.BottomNavigationBar
 import pro.jayeshseth.bottomnav.NavigationBarLayout
 import pro.jayeshseth.bottomnav.SegmentedButtonRow
@@ -287,10 +292,10 @@ fun SegmentedControlLabScreen(onBack: () -> Unit) {
                         height             = barHeightDp.dp,
                         instantDragMode    = instantDragMode,
                         isScrollable       = isScrollable,
-                        onItemSelected     = { sel = it }
+                        onItemSelected     = { index: Int -> sel = index }
                     ) {
-                        for ((i, pair) in customItems.withIndex()) {
-                            val (icon, label) = pair
+                        for (i in customItems.indices) {
+                            val (icon, label) = customItems[i]
                             val isSelected = sel == i
                             Box(
                                 modifier = Modifier
@@ -332,10 +337,10 @@ fun SegmentedControlLabScreen(onBack: () -> Unit) {
                         height             = barHeightDp.dp,
                         instantDragMode    = instantDragMode,
                         isScrollable       = isScrollable,
-                        onItemSelected     = { sel = it }
+                        onItemSelected     = { index: Int -> sel = index }
                     ) {
-                        for ((i, pair) in customItems.withIndex()) {
-                            val (icon, label) = pair
+                        for (i in customItems.indices) {
+                            val (icon, label) = customItems[i]
                             val isSelected = sel == i
                             Box(
                                 modifier = Modifier

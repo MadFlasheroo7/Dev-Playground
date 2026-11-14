@@ -38,6 +38,10 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.NetworkInterface
 
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import pro.jayeshseth.devcontrols.data.StandbyBucketPrefs
+
 class AndroidAudioSyncManager(
     private val context: Context,
     private val mediaController: MediaController
@@ -70,16 +74,15 @@ class AndroidAudioSyncManager(
 
     override var clientLatencyNudgeMs: Long = 0L
 
-    private val _appStandbyBucket = MutableStateFlow<String?>(null)
-    override val appStandbyBucket = _appStandbyBucket.asStateFlow()
+    override val appStandbyBucket = pro.jayeshseth.devcontrols.data.StandbyBucketTracker.appStandbyBucket
+    override val standbyHistoryLog = pro.jayeshseth.devcontrols.data.StandbyBucketTracker.standbyHistoryLog
 
-    init {
-        scope.launch {
-            while (isActive) {
-                updateStandbyBucket()
-                delay(10000)
-            }
-        }
+    override fun refreshStandbyBucket() {
+        pro.jayeshseth.devcontrols.data.StandbyBucketTracker.refresh(context)
+    }
+
+    override fun clearStandbyHistory() {
+        pro.jayeshseth.devcontrols.data.StandbyBucketTracker.clearHistory(context)
     }
 
     // Sockets & Jobs
@@ -112,29 +115,6 @@ class AndroidAudioSyncManager(
         val time = System.currentTimeMillis()
         val formattedTime = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date(time))
         _logConsole.value = (_logConsole.value + "[$formattedTime] $msg").takeLast(80)
-    }
-
-    private fun updateStandbyBucket() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                val usageStats = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-                val bucket = usageStats?.appStandbyBucket
-                val name = when (bucket) {
-                    UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "Active"
-                    UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "Working Set"
-                    UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "Frequent"
-                    UsageStatsManager.STANDBY_BUCKET_RARE -> "Rare"
-                    UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "Restricted"
-                    null -> "Unknown"
-                    else -> "Unknown ($bucket)"
-                }
-                _appStandbyBucket.value = name
-            } catch (e: Exception) {
-                _appStandbyBucket.value = "Error: ${e.message}"
-            }
-        } else {
-            _appStandbyBucket.value = "Not Supported (< API 28)"
-        }
     }
 
     override fun requestIgnoreBatteryOptimizations() {

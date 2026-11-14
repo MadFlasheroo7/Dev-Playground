@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,6 +63,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -212,8 +214,41 @@ object BottomNavigationBarDefaults {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. BottomNavPill
+// 4. BottomNavPill & Indicator Scope
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Scope provided to indicator composables rendered inside [BottomNavigationBar],
+ * [NavigationBarLayout], [SegmentedButtonRow], and [SegmentedButtonLayout].
+ */
+@Immutable
+class BottomNavIndicatorScope(
+    val scale: Float,
+    val gradientStart: Color,
+    val gradientEnd: Color,
+    val cornerRadius: Dp,
+    val isDragging: Boolean,
+    val modifier: Modifier = Modifier
+)
+
+/**
+ * Standard background pill component for [BottomNavigationBar] and layout variants.
+ * Can be plugged into custom `indicator` slot lambdas or used standalone.
+ */
+@Composable
+fun BottomNavPill(
+    scope: BottomNavIndicatorScope,
+    modifier: Modifier = Modifier,
+) {
+    BottomNavPill(
+        scale = scope.scale,
+        gradientStart = scope.gradientStart,
+        gradientEnd = scope.gradientEnd,
+        cornerRadius = scope.cornerRadius,
+        isDragging = scope.isDragging,
+        modifier = scope.modifier.then(modifier)
+    )
+}
 
 @Composable
 fun BottomNavPill(
@@ -253,6 +288,7 @@ fun BottomNavigationBar(
     instantDragMode:    Boolean  = false,
     isScrollable:       Boolean  = false,
     minItemWidth:       Dp       = 90.dp,
+    indicator:          @Composable (BottomNavIndicatorScope) -> Unit = { BottomNavPill(it) },
     content:            BottomNavBarScope.() -> Unit,
 ) {
     val recompositionCounter = remember { RecompositionCounter() }
@@ -353,24 +389,31 @@ fun BottomNavigationBar(
         }
     }
 
-    val outerModifier = if (isScrollable) {
-        modifier.fillMaxWidth().horizontalScroll(scrollState)
-    } else {
-        modifier.fillMaxWidth()
-    }
+    val trackShape = RoundedCornerShape(cornerRadius)
 
-    Box(outerModifier) {
-        val innerModifier = if (isScrollable) {
-            Modifier.width(minItemWidth * items.size).height(height)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .background(resolvedTrackColor, trackShape)
+            .clip(trackShape)
+    ) {
+        val contentModifier = if (isScrollable) {
+            Modifier.fillMaxSize().horizontalScroll(scrollState)
         } else {
-            Modifier.fillMaxWidth().height(height)
+            Modifier.fillMaxSize()
         }
 
-        BoxWithConstraints(
-            innerModifier.background(resolvedTrackColor, RoundedCornerShape(cornerRadius))
-        ) {
-            val widthPx = with(density) { maxWidth.toPx() }
-            val segWPx  = widthPx / items.size
+        Box(contentModifier) {
+            val innerModifier = if (isScrollable) {
+                Modifier.width(minItemWidth * items.size).fillMaxHeight()
+            } else {
+                Modifier.fillMaxSize()
+            }
+
+            BoxWithConstraints(innerModifier) {
+                val widthPx = with(density) { maxWidth.toPx() }
+                val segWPx  = widthPx / items.size
 
             Box(
                 Modifier
@@ -448,16 +491,18 @@ fun BottomNavigationBar(
                     sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
                 else 0f
 
-                BottomNavPill(
-                    scale         = state.scale.value + wobble,
-                    gradientStart = startColor,
-                    gradientEnd   = endColor,
-                    cornerRadius  = cornerRadius,
-                    isDragging    = state.isDragging,
-                    modifier      = Modifier
-                        .offset(x = pillOffsetDp)
-                        .width(pillWidthDp)
-                        .fillMaxSize(),
+                indicator(
+                    BottomNavIndicatorScope(
+                        scale         = state.scale.value + wobble,
+                        gradientStart = startColor,
+                        gradientEnd   = endColor,
+                        cornerRadius  = cornerRadius,
+                        isDragging    = state.isDragging,
+                        modifier      = Modifier
+                            .offset(x = pillOffsetDp)
+                            .width(pillWidthDp)
+                            .fillMaxSize(),
+                    )
                 )
 
                 Row(Modifier.fillMaxSize()) {
@@ -490,6 +535,7 @@ fun BottomNavigationBar(
         }
     }
 }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. NavigationBarLayout  — Passive Custom Layout Component
@@ -510,6 +556,7 @@ fun NavigationBarLayout(
     instantDragMode:    Boolean  = false,
     isScrollable:       Boolean  = false,
     minItemWidth:       Dp       = 90.dp,
+    indicator:          @Composable (BottomNavIndicatorScope) -> Unit = { BottomNavPill(it) },
     content:            BottomNavBarScope.() -> Unit,
 ) {
     val recompositionCounter = remember { RecompositionCounter() }
@@ -528,6 +575,7 @@ fun NavigationBarLayout(
     val latestItems         by rememberUpdatedState(items)
     val latestSelectedIndex by rememberUpdatedState(selectedIndex)
 
+    val density        = LocalDensity.current
     val haptic         = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -545,6 +593,70 @@ fun NavigationBarLayout(
     val startColor by animateColorAsState(targetStart, spring(stiffness = Spring.StiffnessLow), label = "layoutPillGradStart")
     val endColor   by animateColorAsState(targetEnd,   spring(stiffness = Spring.StiffnessLow), label = "layoutPillGradEnd")
 
+    val scrollState = rememberScrollState()
+    var latestViewportPointerX by remember { mutableFloatStateOf(-1f) }
+
+    LaunchedEffect(selectedIndex, isScrollable) {
+        if (isScrollable) {
+            val minSegPx = with(density) { minItemWidth.toPx() }
+            val targetPx = (selectedIndex * minSegPx).toInt()
+            scrollState.animateScrollTo(targetPx)
+        }
+    }
+
+    LaunchedEffect(state.isDragging, isScrollable) {
+        if (state.isDragging && isScrollable) {
+            val edgeZonePx = with(density) { 56.dp.toPx() }
+            val minSegPx = with(density) { minItemWidth.toPx() }
+            val totalWidthPx = minSegPx * items.size
+            while (isActive && state.isDragging) {
+                val ptrX = latestViewportPointerX
+                if (ptrX >= 0f) {
+                    val maxScroll = scrollState.maxValue.toFloat()
+                    val currentScroll = scrollState.value.toFloat()
+                    val viewportWidthPx = (totalWidthPx - maxScroll).coerceAtLeast(1f)
+
+                    if (ptrX < edgeZonePx && currentScroll > 0f) {
+                        val factor = ((edgeZonePx - ptrX) / edgeZonePx).coerceIn(0.1f, 1f)
+                        val deltaScroll = -16f * factor * (density.density)
+                        scrollState.scrollBy(deltaScroll)
+
+                        val currentPillPx = state.position.value * minSegPx + deltaScroll
+                        val newIndex = (currentPillPx / minSegPx).coerceIn(0f, (items.size - 1).toFloat())
+                        state.position.snapTo(newIndex)
+                        state.leftPosition.snapTo(newIndex)
+                        state.rightPosition.snapTo(newIndex)
+
+                        val crossedIdx = (newIndex + 0.5f).toInt().coerceIn(0, latestItems.size - 1)
+                        if (crossedIdx != latestSelectedIndex) {
+                            latestItems[crossedIdx].onClick()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    } else if (ptrX > (viewportWidthPx - edgeZonePx) && currentScroll < maxScroll) {
+                        val factor = ((ptrX - (viewportWidthPx - edgeZonePx)) / edgeZonePx).coerceIn(0.1f, 1f)
+                        val deltaScroll = 16f * factor * (density.density)
+                        scrollState.scrollBy(deltaScroll)
+
+                        val currentPillPx = state.position.value * minSegPx + deltaScroll
+                        val newIndex = (currentPillPx / minSegPx).coerceIn(0f, (items.size - 1).toFloat())
+                        state.position.snapTo(newIndex)
+                        state.leftPosition.snapTo(newIndex)
+                        state.rightPosition.snapTo(newIndex)
+
+                        val crossedIdx = (newIndex + 0.5f).toInt().coerceIn(0, latestItems.size - 1)
+                        if (crossedIdx != latestSelectedIndex) {
+                            latestItems[crossedIdx].onClick()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                    }
+                }
+                withFrameNanos { }
+            }
+        } else {
+            latestViewportPointerX = -1f
+        }
+    }
+
     var segmentWidthPx by remember { mutableStateOf(0f) }
 
     val gestureModifier = Modifier.pointerInput(items.size, instantDragMode) {
@@ -553,6 +665,7 @@ fun NavigationBarLayout(
                 val hit = (offset.x / segmentWidthPx).toInt().coerceIn(0, latestItems.size - 1)
                 if (hit == latestSelectedIndex) {
                     state.isDragging = true
+                    latestViewportPointerX = offset.x - scrollState.value
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             }
@@ -561,6 +674,7 @@ fun NavigationBarLayout(
         val onDrag = { change: PointerInputChange, delta: Offset ->
             change.consume()
             if (state.isDragging && segmentWidthPx > 0f) {
+                latestViewportPointerX = change.position.x - scrollState.value
                 coroutineScope.launch {
                     val newIndex = (state.position.value + delta.x / segmentWidthPx)
                         .coerceIn(0f, (latestItems.size - 1).toFloat())
@@ -575,6 +689,7 @@ fun NavigationBarLayout(
         }
 
         val onEnd = {
+            latestViewportPointerX = -1f
             if (state.isDragging) {
                 state.isDragging = false
                 val committed = (state.position.value + 0.5f).toInt().coerceIn(0, latestItems.size - 1)
@@ -584,6 +699,7 @@ fun NavigationBarLayout(
         }
 
         val onCancel = {
+            latestViewportPointerX = -1f
             if (state.isDragging) {
                 state.isDragging = false
             }
@@ -606,91 +722,117 @@ fun NavigationBarLayout(
         }
     }
 
-    Layout(
+    val trackShape = RoundedCornerShape(cornerRadius)
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
-            .background(resolvedTrackColor, RoundedCornerShape(cornerRadius))
-            .then(gestureModifier),
-        content = {
-            val left = state.leftPosition.value
-            val right = state.rightPosition.value
-            val progress = (left + right) / 2f
-            val wobble = if (state.isDragging || state.position.isRunning)
-                sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
-            else 0f
+            .background(resolvedTrackColor, trackShape)
+            .clip(trackShape)
+    ) {
+        val scrollModifier = if (isScrollable) {
+            Modifier.fillMaxSize().horizontalScroll(scrollState)
+        } else {
+            Modifier.fillMaxSize()
+        }
 
-            BottomNavPill(
-                scale         = state.scale.value + wobble,
-                gradientStart = startColor,
-                gradientEnd   = endColor,
-                cornerRadius  = cornerRadius,
-                isDragging    = state.isDragging,
-                modifier      = Modifier.fillMaxSize(),
-            )
+        Box(scrollModifier) {
+            val layoutModifier = if (isScrollable) {
+                Modifier.width(minItemWidth * items.size).fillMaxHeight()
+            } else {
+                Modifier.fillMaxSize()
+            }
 
-            items.forEachIndexed { index, item ->
-                val isSelected = index == selectedIndex
-                Box(
-                    modifier = Modifier
-                        .clickable(enabled = !state.isDragging) {
-                            item.onClick()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text       = item.label,
-                        color      = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        fontSize   = 15.sp,
-                        modifier   = Modifier.graphicsLayer {
-                            val s = if (isSelected) 1.1f else 1.0f
-                            scaleX = s; scaleY = s
-                        },
+            Layout(
+                modifier = layoutModifier.then(gestureModifier),
+                content = {
+                    val left = state.leftPosition.value
+                    val right = state.rightPosition.value
+                    val progress = (left + right) / 2f
+                    val wobble = if (state.isDragging || state.position.isRunning)
+                        sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
+                    else 0f
+
+                    indicator(
+                        BottomNavIndicatorScope(
+                            scale         = state.scale.value + wobble,
+                            gradientStart = startColor,
+                            gradientEnd   = endColor,
+                            cornerRadius  = cornerRadius,
+                            isDragging    = state.isDragging,
+                            modifier      = Modifier.fillMaxSize(),
+                        )
+                    )
+
+                    items.forEachIndexed { index, item ->
+                        val isSelected = index == selectedIndex
+                        Box(
+                            modifier = Modifier
+                                .clickable(enabled = !state.isDragging) {
+                                    item.onClick()
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text       = item.label,
+                                color      = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize   = 15.sp,
+                                modifier   = Modifier.graphicsLayer {
+                                    val s = if (isSelected) 1.1f else 1.0f
+                                    scaleX = s; scaleY = s
+                                },
+                            )
+                        }
+                    }
+                }
+            ) { measurables, constraints ->
+                val totalWidth = constraints.maxWidth
+                val totalHeight = constraints.maxHeight
+
+                val itemCount = items.size
+                val segmentWidth = if (isScrollable) {
+                    with(density) { minItemWidth.toPx() }.toInt().coerceAtLeast(1)
+                } else {
+                    totalWidth / itemCount
+                }
+                segmentWidthPx = segmentWidth.toFloat()
+
+                val left = state.leftPosition.value
+                val right = state.rightPosition.value
+                val dynamicPillWidth = ((right - left + 1f) * segmentWidth).toInt()
+
+                val pillMeasurable = measurables[0]
+                val pillPlaceable = pillMeasurable.measure(
+                    constraints.copy(
+                        minWidth  = dynamicPillWidth,
+                        maxWidth  = dynamicPillWidth,
+                        minHeight = totalHeight,
+                        maxHeight = totalHeight
+                    )
+                )
+
+                val itemPlaceables = (1..itemCount).map { i ->
+                    measurables[i].measure(
+                        constraints.copy(
+                            minWidth  = segmentWidth,
+                            maxWidth  = segmentWidth,
+                            minHeight = totalHeight,
+                            maxHeight = totalHeight
+                        )
                     )
                 }
-            }
-        }
-    ) { measurables, constraints ->
-        val totalWidth = constraints.maxWidth
-        val totalHeight = constraints.maxHeight
 
-        val itemCount = items.size
-        val segmentWidth = totalWidth / itemCount
-        segmentWidthPx = segmentWidth.toFloat()
+                layout(totalWidth, totalHeight) {
+                    val pillX = (left * segmentWidth).toInt()
+                    pillPlaceable.placeRelative(pillX, 0)
 
-        val left = state.leftPosition.value
-        val right = state.rightPosition.value
-        val dynamicPillWidth = ((right - left + 1f) * segmentWidth).toInt()
-
-        val pillMeasurable = measurables[0]
-        val pillPlaceable = pillMeasurable.measure(
-            constraints.copy(
-                minWidth  = dynamicPillWidth,
-                maxWidth  = dynamicPillWidth,
-                minHeight = totalHeight,
-                maxHeight = totalHeight
-            )
-        )
-
-        val itemPlaceables = (1..itemCount).map { i ->
-            measurables[i].measure(
-                constraints.copy(
-                    minWidth  = segmentWidth,
-                    maxWidth  = segmentWidth,
-                    minHeight = totalHeight,
-                    maxHeight = totalHeight
-                )
-            )
-        }
-
-        layout(totalWidth, totalHeight) {
-            val pillX = (left * segmentWidth).toInt()
-            pillPlaceable.placeRelative(pillX, 0)
-
-            itemPlaceables.forEachIndexed { index, placeable ->
-                placeable.placeRelative(index * segmentWidth, 0)
+                    itemPlaceables.forEachIndexed { index, placeable ->
+                        placeable.placeRelative(index * segmentWidth, 0)
+                    }
+                }
             }
         }
     }
@@ -723,6 +865,7 @@ fun SegmentedButtonRow(
     isScrollable:        Boolean  = false,
     minItemWidth:        Dp       = 90.dp,
     onItemSelected:      ((index: Int) -> Unit)? = null,
+    indicator:           @Composable (BottomNavIndicatorScope) -> Unit = { BottomNavPill(it) },
     content:             @Composable RowScope.() -> Unit,
 ) {
     val recompositionCounter = remember { RecompositionCounter() }
@@ -818,24 +961,31 @@ fun SegmentedButtonRow(
         }
     }
 
-    val outerModifier = if (isScrollable) {
-        modifier.fillMaxWidth().horizontalScroll(scrollState)
-    } else {
-        modifier.fillMaxWidth()
-    }
+    val trackShape = RoundedCornerShape(cornerRadius)
 
-    Box(outerModifier) {
-        val innerModifier = if (isScrollable) {
-            Modifier.width(minItemWidth * itemCount).height(height)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .background(resolvedTrackColor, trackShape)
+            .clip(trackShape)
+    ) {
+        val scrollModifier = if (isScrollable) {
+            Modifier.fillMaxSize().horizontalScroll(scrollState)
         } else {
-            Modifier.fillMaxWidth().height(height)
+            Modifier.fillMaxSize()
         }
 
-        BoxWithConstraints(
-            innerModifier.background(resolvedTrackColor, RoundedCornerShape(cornerRadius))
-        ) {
-            val widthPx = with(density) { maxWidth.toPx() }
-            val segWPx  = widthPx / itemCount.coerceAtLeast(1)
+        Box(scrollModifier) {
+            val innerModifier = if (isScrollable) {
+                Modifier.width(minItemWidth * itemCount).fillMaxHeight()
+            } else {
+                Modifier.fillMaxSize()
+            }
+
+            BoxWithConstraints(innerModifier) {
+                val widthPx = with(density) { maxWidth.toPx() }
+                val segWPx  = widthPx / itemCount.coerceAtLeast(1)
 
             Box(
                 Modifier
@@ -915,16 +1065,18 @@ fun SegmentedButtonRow(
                     sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
                 else 0f
 
-                BottomNavPill(
-                    scale         = state.scale.value + wobble,
-                    gradientStart = startColor,
-                    gradientEnd   = endColor,
-                    cornerRadius  = cornerRadius,
-                    isDragging    = state.isDragging,
-                    modifier      = Modifier
-                        .offset(x = pillOffsetDp)
-                        .width(pillWidthDp)
-                        .fillMaxSize(),
+                indicator(
+                    BottomNavIndicatorScope(
+                        scale         = state.scale.value + wobble,
+                        gradientStart = startColor,
+                        gradientEnd   = endColor,
+                        cornerRadius  = cornerRadius,
+                        isDragging    = state.isDragging,
+                        modifier      = Modifier
+                            .offset(x = pillOffsetDp)
+                            .width(pillWidthDp)
+                            .fillMaxSize(),
+                    )
                 )
 
                 Row(
@@ -936,6 +1088,7 @@ fun SegmentedButtonRow(
             }
         }
     }
+}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -966,6 +1119,7 @@ fun SegmentedButtonLayout(
     isScrollable:        Boolean  = false,
     minItemWidth:        Dp       = 90.dp,
     onItemSelected:      ((index: Int) -> Unit)? = null,
+    indicator:           @Composable (BottomNavIndicatorScope) -> Unit = { BottomNavPill(it) },
     content:             @Composable RowScope.() -> Unit,
 ) {
     val recompositionCounter = remember { RecompositionCounter() }
@@ -1063,149 +1217,163 @@ fun SegmentedButtonLayout(
 
     var segmentWidthPx by remember { mutableFloatStateOf(0f) }
 
-    val outerModifier = if (isScrollable) {
-        modifier.fillMaxWidth().horizontalScroll(scrollState)
-    } else {
-        modifier.fillMaxWidth()
-    }
+    val trackShape = RoundedCornerShape(cornerRadius)
 
-    Box(outerModifier) {
-        val innerModifier = if (isScrollable) {
-            Modifier.width(minItemWidth * itemCount).height(height)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .background(resolvedTrackColor, trackShape)
+            .clip(trackShape)
+    ) {
+        val scrollModifier = if (isScrollable) {
+            Modifier.fillMaxSize().horizontalScroll(scrollState)
         } else {
-            Modifier.fillMaxWidth().height(height)
+            Modifier.fillMaxSize()
         }
 
-        val gestureModifier = Modifier.pointerInput(itemCount, instantDragMode) {
-            val onStart = { offset: Offset ->
-                if (segmentWidthPx > 0f) {
-                    val hit = (offset.x / segmentWidthPx).toInt().coerceIn(0, itemCount - 1)
-                    if (hit == latestSelectedIndex) {
-                        state.isDragging = true
-                        latestViewportPointerX = offset.x - scrollState.value
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    }
-                }
+        Box(scrollModifier) {
+            val layoutModifier = if (isScrollable) {
+                Modifier.width(minItemWidth * itemCount).fillMaxHeight()
+            } else {
+                Modifier.fillMaxSize()
             }
 
-            val onDrag = { change: PointerInputChange, delta: Offset ->
-                change.consume()
-                if (state.isDragging && segmentWidthPx > 0f) {
-                    latestViewportPointerX = change.position.x - scrollState.value
-                    coroutineScope.launch {
-                        val totalW = segmentWidthPx * itemCount
-                        val newOffset = (state.position.value * segmentWidthPx + delta.x)
-                            .coerceIn(0f, totalW - segmentWidthPx)
-                        val newIndex = newOffset / segmentWidthPx
-                        state.position.snapTo(newIndex)
-                        val crossedIdx = (newIndex + 0.5f).toInt().coerceIn(0, itemCount - 1)
-                        if (crossedIdx != latestSelectedIndex) {
-                            state.selectedIndex = crossedIdx
-                            latestOnItemSelected?.invoke(crossedIdx)
+            val gestureModifier = Modifier.pointerInput(itemCount, instantDragMode) {
+                val onStart = { offset: Offset ->
+                    if (segmentWidthPx > 0f) {
+                        val hit = (offset.x / segmentWidthPx).toInt().coerceIn(0, itemCount - 1)
+                        if (hit == latestSelectedIndex) {
+                            state.isDragging = true
+                            latestViewportPointerX = offset.x - scrollState.value
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
                     }
                 }
-            }
 
-            val onEnd = {
-                latestViewportPointerX = -1f
-                if (state.isDragging) {
-                    state.isDragging = false
-                    val committed = (state.position.value + 0.5f).toInt().coerceIn(0, itemCount - 1)
-                    state.selectedIndex = committed
-                    latestOnItemSelected?.invoke(committed)
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                val onDrag = { change: PointerInputChange, delta: Offset ->
+                    change.consume()
+                    if (state.isDragging && segmentWidthPx > 0f) {
+                        latestViewportPointerX = change.position.x - scrollState.value
+                        coroutineScope.launch {
+                            val totalW = segmentWidthPx * itemCount
+                            val newOffset = (state.position.value * segmentWidthPx + delta.x)
+                                .coerceIn(0f, totalW - segmentWidthPx)
+                            val newIndex = newOffset / segmentWidthPx
+                            state.position.snapTo(newIndex)
+                            val crossedIdx = (newIndex + 0.5f).toInt().coerceIn(0, itemCount - 1)
+                            if (crossedIdx != latestSelectedIndex) {
+                                state.selectedIndex = crossedIdx
+                                latestOnItemSelected?.invoke(crossedIdx)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        }
+                    }
+                }
+
+                val onEnd = {
+                    latestViewportPointerX = -1f
+                    if (state.isDragging) {
+                        state.isDragging = false
+                        val committed = (state.position.value + 0.5f).toInt().coerceIn(0, itemCount - 1)
+                        state.selectedIndex = committed
+                        latestOnItemSelected?.invoke(committed)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
+                }
+
+                val onCancel = {
+                    latestViewportPointerX = -1f
+                    if (state.isDragging) {
+                        state.isDragging = false
+                    }
+                }
+
+                if (instantDragMode) {
+                    detectDragGestures(
+                        onDragStart  = onStart,
+                        onDrag       = onDrag,
+                        onDragEnd    = onEnd,
+                        onDragCancel = onCancel,
+                    )
+                } else {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart  = onStart,
+                        onDrag       = onDrag,
+                        onDragEnd    = onEnd,
+                        onDragCancel = onCancel,
+                    )
                 }
             }
 
-            val onCancel = {
-                latestViewportPointerX = -1f
-                if (state.isDragging) {
-                    state.isDragging = false
+            Layout(
+                modifier = layoutModifier.then(gestureModifier),
+                content = {
+                    val left = state.leftPosition.value
+                    val right = state.rightPosition.value
+                    val progress = (left + right) / 2f
+                    val wobble = if (state.isDragging || state.position.isRunning)
+                        sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
+                    else 0f
+
+                    indicator(
+                        BottomNavIndicatorScope(
+                            scale         = state.scale.value + wobble,
+                            gradientStart = startColor,
+                            gradientEnd   = endColor,
+                            cornerRadius  = cornerRadius,
+                            isDragging    = state.isDragging,
+                            modifier      = Modifier.fillMaxSize(),
+                        )
+                    )
+
+                    BottomNavRowScope.content()
                 }
-            }
+            ) { measurables, constraints ->
+                val totalWidth = constraints.maxWidth
+                val totalHeight = constraints.maxHeight
 
-            if (instantDragMode) {
-                detectDragGestures(
-                    onDragStart  = onStart,
-                    onDrag       = onDrag,
-                    onDragEnd    = onEnd,
-                    onDragCancel = onCancel,
-                )
-            } else {
-                detectDragGesturesAfterLongPress(
-                    onDragStart  = onStart,
-                    onDrag       = onDrag,
-                    onDragEnd    = onEnd,
-                    onDragCancel = onCancel,
-                )
-            }
-        }
+                val actualItemCount = itemCount.coerceAtLeast(1)
+                val segmentWidth = if (isScrollable) {
+                    with(density) { minItemWidth.toPx() }.toInt().coerceAtLeast(1)
+                } else {
+                    totalWidth / actualItemCount
+                }
+                segmentWidthPx = segmentWidth.toFloat()
 
-        Layout(
-            modifier = innerModifier
-                .background(resolvedTrackColor, RoundedCornerShape(cornerRadius))
-                .then(gestureModifier),
-            content = {
                 val left = state.leftPosition.value
                 val right = state.rightPosition.value
-                val progress = (left + right) / 2f
-                val wobble = if (state.isDragging || state.position.isRunning)
-                    sin(progress * PI * 2.0).toFloat() * wobbleAmplitude
-                else 0f
+                val dynamicPillWidth = ((right - left + 1f) * segmentWidth).toInt()
 
-                BottomNavPill(
-                    scale         = state.scale.value + wobble,
-                    gradientStart = startColor,
-                    gradientEnd   = endColor,
-                    cornerRadius  = cornerRadius,
-                    isDragging    = state.isDragging,
-                    modifier      = Modifier.fillMaxSize(),
-                )
-
-                BottomNavRowScope.content()
-            }
-        ) { measurables, constraints ->
-            val totalWidth = constraints.maxWidth
-            val totalHeight = constraints.maxHeight
-
-            val actualItemCount = itemCount.coerceAtLeast(1)
-            val segmentWidth = totalWidth / actualItemCount
-            segmentWidthPx = segmentWidth.toFloat()
-
-            val left = state.leftPosition.value
-            val right = state.rightPosition.value
-            val dynamicPillWidth = ((right - left + 1f) * segmentWidth).toInt()
-
-            val pillMeasurable = measurables[0]
-            val pillPlaceable = pillMeasurable.measure(
-                constraints.copy(
-                    minWidth  = dynamicPillWidth,
-                    maxWidth  = dynamicPillWidth,
-                    minHeight = totalHeight,
-                    maxHeight = totalHeight
-                )
-            )
-
-            val itemMeasurables = measurables.drop(1)
-            val itemPlaceables = itemMeasurables.map { measurable ->
-                measurable.measure(
+                val pillMeasurable = measurables[0]
+                val pillPlaceable = pillMeasurable.measure(
                     constraints.copy(
-                        minWidth  = segmentWidth,
-                        maxWidth  = segmentWidth,
+                        minWidth  = dynamicPillWidth,
+                        maxWidth  = dynamicPillWidth,
                         minHeight = totalHeight,
                         maxHeight = totalHeight
                     )
                 )
-            }
 
-            layout(totalWidth, totalHeight) {
-                val pillX = (left * segmentWidth).toInt()
-                pillPlaceable.placeRelative(pillX, 0)
+                val itemMeasurables = measurables.drop(1)
+                val itemPlaceables = itemMeasurables.map { measurable ->
+                    measurable.measure(
+                        constraints.copy(
+                            minWidth  = segmentWidth,
+                            maxWidth  = segmentWidth,
+                            minHeight = totalHeight,
+                            maxHeight = totalHeight
+                        )
+                    )
+                }
 
-                itemPlaceables.forEachIndexed { index, placeable ->
-                    placeable.placeRelative(index * segmentWidth, 0)
+                layout(totalWidth, totalHeight) {
+                    val pillX = (left * segmentWidth).toInt()
+                    pillPlaceable.placeRelative(pillX, 0)
+
+                    itemPlaceables.forEachIndexed { index, placeable ->
+                        placeable.placeRelative(index * segmentWidth, 0)
+                    }
                 }
             }
         }

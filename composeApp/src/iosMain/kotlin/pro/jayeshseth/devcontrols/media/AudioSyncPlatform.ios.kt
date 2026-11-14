@@ -19,6 +19,9 @@ class IosAudioSyncManager : AudioSyncManager {
     override val logConsole = MutableStateFlow<List<String>>(listOf("[iOS] Audio sync network sockets are stubbed on iOS."))
     override val discoveredHosts = MutableStateFlow<List<Pair<String, String>>>(emptyList())
     override val appStandbyBucket = MutableStateFlow<String?>("Not Applicable (iOS)")
+    override val standbyHistoryLog = MutableStateFlow<List<StandbyBucketRecord>>(emptyList())
+    override fun refreshStandbyBucket() {}
+    override fun clearStandbyHistory() {}
     override fun requestIgnoreBatteryOptimizations() {}
 
     override fun startHost(port: Int) {}

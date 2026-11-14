@@ -23,6 +23,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.CHARTS -> pro.jayeshseth.devcontrols.ui.ChartsLabScreen(onBack = onBack)
         Route.CIRCLE_PACKING -> pro.jayeshseth.devcontrols.ui.CirclePackingLabScreen(onBack = onBack)
         Route.CIRCULAR_REVEAL -> pro.jayeshseth.devcontrols.ui.CircularRevealThemeScreen(onBack = onBack)
+        Route.CHROMATIC_FERROFLUID -> pro.jayeshseth.devcontrols.ui.visualfx.ShaderEngineStudioScreen(onBack = onBack)
         Route.CLOCK_GALLERY -> pro.jayeshseth.devcontrols.ui.ClockGalleryLabScreen(onBack = onBack)
         Route.CLOTH -> pro.jayeshseth.devcontrols.ui.ClothLabScreen(onBack = onBack)
         Route.COACH_MARK -> pro.jayeshseth.devcontrols.ui.CoachMarkLabScreen(onBack = onBack)
@@ -44,6 +45,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.DOODLE_PHYSICS -> pro.jayeshseth.devcontrols.ui.DoodlePhysicsLabScreen(onBack = onBack)
         Route.DOUBLE_PENDULUM -> pro.jayeshseth.devcontrols.ui.DoublePendulumLabScreen(onBack = onBack)
         Route.DYNAMIC_ISLAND -> pro.jayeshseth.devcontrols.ui.visualfx.DynamicIslandScreen(onBack = onBack)
+        Route.EULERIAN_FLUID -> pro.jayeshseth.devcontrols.ui.shaders.EulerianFluidScreen(onBack = onBack)
         Route.FALLING_SAND -> pro.jayeshseth.devcontrols.ui.FallingSandLabScreen(onBack = onBack)
         Route.FIREWORKS -> pro.jayeshseth.devcontrols.ui.FireworksLabScreen(onBack = onBack)
         Route.FLIP_CLOCK -> pro.jayeshseth.devcontrols.ui.FlipClockLabScreen(onBack = onBack)
@@ -61,6 +63,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.HABIT_TRACKER -> pro.jayeshseth.devcontrols.ui.productivity.HabitTrackerScreen(onBack = onBack)
         Route.HASHING -> pro.jayeshseth.devcontrols.ui.privacy.HashingScreen(onBack = onBack)
         Route.HEIGHTMAP3D -> pro.jayeshseth.devcontrols.ui.Heightmap3DLabScreen(onBack = onBack)
+        Route.HYPERSPACE_4D -> pro.jayeshseth.devcontrols.ui.shaders.Hyperspace4DScreen(onBack = onBack)
         Route.HTML_PARSER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.HtmlParserPlaygroundScreen(onBack = onBack)
         Route.IME_INSETS -> pro.jayeshseth.devcontrols.ui.ImeInsetsLabScreen(onBack = onBack)
         Route.JSON_FMT -> pro.jayeshseth.devcontrols.ui.devtools.JsonFormatterScreen(onBack = onBack)
@@ -94,6 +97,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.PARTICLES -> pro.jayeshseth.devcontrols.ui.ParticleLabScreen(onBack = onBack)
         Route.PARTICLE_TEXT -> pro.jayeshseth.devcontrols.ui.visualfx.ParticleTextScreen(onBack = onBack)
         Route.PARTICLE_VECTOR -> pro.jayeshseth.devcontrols.ui.visualfx.ParticleVectorScreen(onBack = onBack)
+        Route.PARTICLE_QR -> pro.jayeshseth.devcontrols.ui.visualfx.ParticleQrScreen(onBack = onBack)
         Route.PNG_VECTORIZER -> pro.jayeshseth.devcontrols.ui.PngVectorizerLabScreen(onBack = onBack)
         Route.PATHFINDING -> pro.jayeshseth.devcontrols.ui.PathfindingLabScreen(onBack = onBack)
         Route.PATH_MORPH -> pro.jayeshseth.devcontrols.ui.PathMorphLabScreen(onBack = onBack)
@@ -116,6 +120,7 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.SCRATCH -> pro.jayeshseth.devcontrols.ui.ScratchRevealLabScreen(onBack = onBack)
         Route.SEGMENTED -> pro.jayeshseth.devcontrols.ui.SegmentedControlLabScreen(onBack = onBack)
         Route.SHARED_ELEMENT -> pro.jayeshseth.devcontrols.ui.SharedElementLabScreen(onBack = onBack)
+        Route.SHADER_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.ShaderPlaygroundScreen(onBack = onBack)
         Route.SHIMMER -> pro.jayeshseth.devcontrols.ui.ShimmerLabScreen(onBack = onBack)
         Route.SIGNATURE -> pro.jayeshseth.devcontrols.ui.SignaturePadLabScreen(onBack = onBack)
         Route.SNAKE -> pro.jayeshseth.devcontrols.ui.SnakeGameScreen(onBack = onBack)
@@ -160,9 +165,11 @@ fun CommonScreen(route: Route, onBack: () -> Unit, onNavigate: (Route) -> Unit =
         Route.STANDBY_TRACKER -> pro.jayeshseth.devcontrols.ui.devtools.StandbyTrackerScreen(onBack = onBack)
         Route.ANIMATION_BUILDER -> pro.jayeshseth.devcontrols.ui.devtools.AnimationBuilderScreen(onBack = onBack)
         Route.COMPOSE_VIDEO -> pro.jayeshseth.devcontrols.ui.composevideo.ComposeVideoScreen(onBack = onBack)
+        Route.VIRTUAL_CAMERA_STUDIO -> pro.jayeshseth.devcontrols.ui.devtools.VirtualCameraStudioScreen()
         Route.NEON_DRAW -> pro.jayeshseth.devcontrols.ui.visualfx.NeonGlowBoardScreen(onBack = onBack)
         Route.PROMPT_TO_UI -> pro.jayeshseth.devcontrols.ui.PromptToUiScreen(onBack = onBack)
         Route.BUDGET_MANAGER -> pro.jayeshseth.devcontrols.ui.finance.BudgetManagerScreen(onBack = onBack)
+        Route.SDUI_STUDIO -> pro.jayeshseth.devcontrols.sdui.playground.SduiStudioScreen(onBack = onBack)
         else -> return false
     }
     return true
@@ -185,6 +192,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.CHARTS,
     Route.CIRCLE_PACKING,
     Route.CIRCULAR_REVEAL,
+    Route.CHROMATIC_FERROFLUID,
     Route.CLOCK_GALLERY,
     Route.CLOTH,
     Route.COACH_MARK,
@@ -206,6 +214,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.DOODLE_PHYSICS,
     Route.DOUBLE_PENDULUM,
     Route.DYNAMIC_ISLAND,
+    Route.EULERIAN_FLUID,
     Route.FALLING_SAND,
     Route.FIREWORKS,
     Route.FLIP_CLOCK,
@@ -224,6 +233,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.HABIT_TRACKER,
     Route.HASHING,
     Route.HEIGHTMAP3D,
+    Route.HYPERSPACE_4D,
     Route.HTML_PARSER_PLAYGROUND,
     Route.IME_INSETS,
     Route.JSON_FMT,
@@ -257,6 +267,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.PARTICLES,
     Route.PARTICLE_TEXT,
     Route.PARTICLE_VECTOR,
+    Route.PARTICLE_QR,
     Route.PNG_VECTORIZER,
     Route.PATHFINDING,
     Route.PATH_MORPH,
@@ -279,6 +290,7 @@ val commonRoutes: Set<Route> = setOf(
     Route.SCRATCH,
     Route.SEGMENTED,
     Route.SHARED_ELEMENT,
+    Route.SHADER_PLAYGROUND,
     Route.SHIMMER,
     Route.SIGNATURE,
     Route.SNAKE,
@@ -333,5 +345,8 @@ val commonRoutes: Set<Route> = setOf(
     Route.VORONOI,
     Route.METABALLS,
     Route.TOUCH_RIPPLE,
-    Route.BUDGET_MANAGER
+    Route.BUDGET_MANAGER,
+    Route.VIRTUAL_CAMERA_STUDIO,
+    Route.HYPR_DECK,
+    Route.SDUI_STUDIO
 )

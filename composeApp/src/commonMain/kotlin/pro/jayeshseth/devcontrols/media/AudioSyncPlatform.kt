@@ -4,6 +4,16 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.flow.StateFlow
 import pro.jayeshseth.media.MediaController
 
+data class StandbyBucketRecord(
+    val id: String,
+    val timestampMs: Long,
+    val formattedTime: String,
+    val bucketName: String,
+    val bucketId: Int,
+    val triggerReason: String,
+    val durationInPreviousBucketMs: Long = 0L
+)
+
 interface AudioSyncManager {
     val isHost: StateFlow<Boolean>
     val isClient: StateFlow<Boolean>
@@ -18,7 +28,10 @@ interface AudioSyncManager {
     val logConsole: StateFlow<List<String>>
     val discoveredHosts: StateFlow<List<Pair<String, String>>> // IP to Name
     val appStandbyBucket: StateFlow<String?>
+    val standbyHistoryLog: StateFlow<List<StandbyBucketRecord>>
 
+    fun refreshStandbyBucket()
+    fun clearStandbyHistory()
     fun requestIgnoreBatteryOptimizations()
     fun startHost(port: Int = 8099)
     fun stopHost()

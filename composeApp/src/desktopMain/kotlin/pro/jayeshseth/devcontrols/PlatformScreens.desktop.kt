@@ -34,6 +34,7 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.METABALLS -> MetaballsLabScreenMultiplatform(onBack)
         Route.TOUCH_RIPPLE -> TouchRippleWaterScreenMultiplatform(onBack)
         Route.GAMEPAD_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.gamepad.GamepadPlaygroundScreen(onBack)
+        Route.HYPR_DECK -> pro.jayeshseth.devcontrols.ui.hyprdeck.HyprDeckScreen(onBack)
         else -> MissingScreen(route, onBack)
     }
 }

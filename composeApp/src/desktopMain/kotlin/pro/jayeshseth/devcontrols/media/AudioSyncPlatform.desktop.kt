@@ -54,6 +54,9 @@ class DesktopAudioSyncManager(
     override var clientLatencyNudgeMs: Long = 0L
 
     override val appStandbyBucket = MutableStateFlow<String?>("Not Applicable (Desktop)")
+    override val standbyHistoryLog = MutableStateFlow<List<StandbyBucketRecord>>(emptyList()).asStateFlow()
+    override fun refreshStandbyBucket() {}
+    override fun clearStandbyHistory() {}
     override fun requestIgnoreBatteryOptimizations() {}
 
     private var serverSocket: ServerSocket? = null

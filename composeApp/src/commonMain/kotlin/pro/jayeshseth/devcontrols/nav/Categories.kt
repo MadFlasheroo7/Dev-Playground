@@ -47,6 +47,10 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Feature Flags", Route.FEATURE_FLAGS),
         LabItem("Package Explorer", Route.PACKAGE_EXPLORER),
         LabItem("Standby Bucket Tracker", Route.STANDBY_TRACKER),
+        LabItem("Intent Forge & Dispatcher", Route.INTENT_FORGE),
+        LabItem("ContentProvider Probe", Route.CONTENT_PROVIDER_PROBE),
+        LabItem("Live Logcat Streamer", Route.LOGCAT_STREAMER),
+        LabItem("AppOps Console", Route.APPOPS_CONSOLE),
         ),
     ),
     LabCategoryDef(
@@ -67,6 +71,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("IME Insets", Route.IME_INSETS),
         LabItem("Gesture Exclusion", Route.GESTURE_EXCLUSION),
         LabItem("Floating Bubble", Route.FLOATING_BUBBLE),
+        LabItem("HyprDeck (Wayland IPC)", Route.HYPR_DECK),
         ),
     ),
     LabCategoryDef(
@@ -74,6 +79,11 @@ val labCategories: List<LabCategoryDef> = listOf(
         listOf(
         LabItem("Gradient Lab", Route.GRADIENT_LAB),
         LabItem("Shader Editor", Route.SHADER_EDITOR),
+        LabItem("Shader Playground — Gemini", Route.SHADER_PLAYGROUND),
+        LabItem("Shader Engine Studio (AGSL/SkSL)", Route.CHROMATIC_FERROFLUID),
+        LabItem("4D Hyperspace & Tesseract", Route.HYPERSPACE_4D),
+        LabItem("Eulerian Navier-Stokes Fluid", Route.EULERIAN_FLUID),
+        LabItem("Live Wallpaper Engine", Route.LIVE_WALLPAPER),
         LabItem("RenderEffect Chain", Route.RENDER_EFFECT),
         LabItem("Raymarch SDF", Route.RAYMARCH),
         LabItem("Ripple Shader", Route.RIPPLE),
@@ -214,6 +224,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Morphing Icons", Route.MORPHING_ICONS),
         LabItem("Particle Text", Route.PARTICLE_TEXT),
         LabItem("Particle Vector Sandbox", Route.PARTICLE_VECTOR),
+        LabItem("Particle QR Sandbox", Route.PARTICLE_QR),
         LabItem("Palette Theming", Route.PALETTE_THEMING),
         LabItem("Speedometer", Route.SPEEDOMETER),
         LabItem("Aurora", Route.AURORA),
@@ -244,6 +255,7 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Biometric Lock", Route.BIOMETRIC_LOCK),
         LabItem("Clipboard Monitor", Route.CLIPBOARD_MON),
         LabItem("Privacy Glow HUD", Route.PRIVACY_GLOW),
+        LabItem("Keystore Attestation", Route.KEYSTORE_ATTESTATION),
         ),
     ),
     LabCategoryDef(
@@ -274,7 +286,9 @@ val labCategories: List<LabCategoryDef> = listOf(
         LabItem("Generators", Route.GENERATORS),
         LabItem("Animation Builder", Route.ANIMATION_BUILDER),
         LabItem("ComposeVideo { }", Route.COMPOSE_VIDEO),
+        LabItem("Virtual Camera Studio", Route.VIRTUAL_CAMERA_STUDIO),
         LabItem("AI Component Canvas", Route.PROMPT_TO_UI),
+        LabItem("Server-Driven UI Studio", Route.SDUI_STUDIO),
         ),
     ),
     LabCategoryDef(
@@ -453,11 +467,18 @@ val labCategories: List<LabCategoryDef> = listOf(
         listOf(
         LabItem("Budget Manager", Route.BUDGET_MANAGER),
         LabItem("System Button Mapper", Route.BUTTON_MAPPER),
+        LabItem("Audio Studio & Pedalboard", Route.AUDIO_STUDIO),
         LabItem("System Audio Effects", Route.AUDIO_EFFECTS),
         LabItem("Meal Planner & Randomizer", Route.MEAL_PLANNER),
         LabItem("Goal & Task Tracker", Route.KANBAN),
         LabItem("Pomodoro Focus Sync", Route.POMODORO),
         LabItem("Habit Grid Tracker", Route.HABIT_TRACKER),
+        ),
+    ),
+    LabCategoryDef(
+        "Desktop & Wayland",
+        listOf(
+            LabItem("HyprDeck (Wayland IPC)", Route.HYPR_DECK),
         ),
     ),
 )

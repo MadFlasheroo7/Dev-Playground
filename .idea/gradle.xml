@@ -10,8 +10,12 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/androidApp" />
+            <option value="$PROJECT_DIR$/audio-studio" />
+            <option value="$PROJECT_DIR$/bottomsheet" />
             <option value="$PROJECT_DIR$/composeApp" />
+            <option value="$PROJECT_DIR$/conference-game" />
             <option value="$PROJECT_DIR$/media" />
+            <option value="$PROJECT_DIR$/shader-engine" />
           </set>
         </option>
       </GradleProjectSettings>

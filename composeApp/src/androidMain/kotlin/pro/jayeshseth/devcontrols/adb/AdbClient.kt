@@ -4,13 +4,21 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
+import java.io.BufferedReader
 import java.io.IOException
+import java.io.InputStreamReader
 import java.net.InetSocketAddress
 import java.net.Socket
 
@@ -155,6 +163,39 @@ class AdbClient private constructor(private val app: Context) {
             }
         }
     }
+
+    /**
+     * Streams output lines from a shell command asynchronously as a [Flow].
+     * Closes the underlying stream when cancelled.
+     */
+    fun openShellFlow(command: String): Flow<String> = flow {
+        val mgr = AdbConnectionManagerImpl.get(app)
+        if (!mgr.isConnected) {
+            val ok = withContext(Dispatchers.IO) { mgr.autoConnect(app, 8_000L) }
+            if (!ok) {
+                _state.value = State.NeedsPair
+                throw IOException("Not connected — pair the device first.")
+            }
+            _state.value = State.Connected
+        }
+        val stream = withContext(Dispatchers.IO) { mgr.openStream("shell:$command") }
+        try {
+            val ins = stream.openInputStream()
+            val reader = BufferedReader(InputStreamReader(ins, Charsets.UTF_8))
+            while (currentCoroutineContext().isActive) {
+                val line = try {
+                    reader.readLine()
+                } catch (e: Throwable) {
+                    null
+                } ?: break
+                emit(line)
+            }
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) {
+                runCatching { stream.close() }
+            }
+        }
+    }.flowOn(Dispatchers.IO)
 
     fun disconnect() {
         runCatching { AdbConnectionManagerImpl.get(app).disconnect() }

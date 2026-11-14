@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,10 +30,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import pro.jayeshseth.devcontrols.media.StandbyBucketRecord
 import pro.jayeshseth.devcontrols.media.rememberAudioSyncManager
 import pro.jayeshseth.devcontrols.media.rememberMediaController
 
@@ -42,11 +45,12 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
     val mediaController = rememberMediaController()
     val syncManager = rememberAudioSyncManager(mediaController)
     val bucketState by syncManager.appStandbyBucket.collectAsState()
+    val historyLog by syncManager.standbyHistoryLog.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("App Standby Tracker") },
+                title = { Text("App Standby Bucket Tracker") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
             )
         },
@@ -60,6 +64,7 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Overview Header
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -68,41 +73,20 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "App Standby Buckets",
+                        text = "App Standby Buckets & History Logging",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Android dynamically groups applications into priority buckets based on user activity. This controls resource usage, background tasks, and network connections.",
+                        text = "Android dynamically groups apps into priority buckets based on user activity. This controls background jobs, alarms, and network sockets. Transitions are tracked and saved in DataStore.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            // Buckets Explanation Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "App Standby Buckets Dictionary",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BucketDetail("🟢 Active", "App is currently in the foreground, running a foreground service, or clicked from a notification. No background restrictions are applied.")
-                        BucketDetail("🟡 Working Set", "App is used frequently, typically daily. Very minor restrictions on jobs and alarms are enforced.")
-                        BucketDetail("🟠 Frequent", "App is used regularly but not daily (e.g., once in few days). Stricter restrictions are placed on background jobs, alarms, and FCM messages.")
-                        BucketDetail("🔴 Rare", "App is used occasionally. Serious limitations on background jobs, alarms, network access, and FCM messages are active.")
-                        BucketDetail("❌ Restricted", "App is rarely or never used, or exhibits battery abuse. The system enforces maximum restrictions, blocking background network access entirely and deferring all jobs.")
-                    }
-                }
-            }
-
+            // Live Bucket Status Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -110,7 +94,7 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Live Status & Tracking",
+                        text = "Live Bucket Status",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -123,13 +107,7 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
                         Text("Current Bucket:", fontWeight = FontWeight.Medium)
                         
                         val bucketName = bucketState ?: "Retrieving..."
-                        val color = when (bucketName) {
-                            "Active" -> MaterialTheme.colorScheme.primary
-                            "Working Set" -> MaterialTheme.colorScheme.secondary
-                            "Frequent" -> MaterialTheme.colorScheme.tertiary
-                            "Rare", "Restricted" -> MaterialTheme.colorScheme.error
-                            else -> MaterialTheme.colorScheme.outline
-                        }
+                        val color = getBucketColor(bucketName)
                         
                         Box(
                             modifier = Modifier
@@ -148,57 +126,120 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
 
                     HorizontalDivider()
 
-                    Text(
-                        text = "The bucket is checked periodically in the background. If you plug the device into a charger, Android will lift standby limits, but the bucket value itself may remain unchanged.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Production Recommendations (How to improve)",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    BulletPoint("Foreground Services: Run an active media foreground service with a visible notification when audio sync/streaming is active. This forces the app to the 'Active' bucket.")
-                    BulletPoint("Battery Optimization Exemption: Prompt users to exempt the app from battery optimizations. This ensures uninterrupted network sockets during deep sleep (Doze).")
-                    BulletPoint("Actionable Notifications: Use FCM messages or local alarms to send high-priority notifications. If the user interacts with the notification, the app rises to 'Active'.")
-                    BulletPoint("Power Source Connection: Educate users that plugging their phone into a charger lifts all App Standby constraints instantly.")
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Button(
-                        onClick = { syncManager.requestIgnoreBatteryOptimizations() },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Request Battery Optimization Exemption")
+                        Button(
+                            onClick = { syncManager.refreshStandbyBucket() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Manual Refresh")
+                        }
+
+                        OutlinedButton(
+                            onClick = { syncManager.requestIgnoreBatteryOptimizations() },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Exempt Battery")
+                        }
                     }
                 }
             }
 
+            // DataStore Persisted Transition History Table
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Transition History Record",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Saved in DataStore across app restarts",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        if (historyLog.isNotEmpty()) {
+                            TextButton(onClick = { syncManager.clearStandbyHistory() }) {
+                                Text("Clear Log", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    if (historyLog.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No transitions recorded yet. Changes will be logged here.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            historyLog.forEach { record ->
+                                HistoryRowItem(record)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Background Execution & Restrictions Matrix Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "App Standby Buckets & Restrictions Matrix",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        BucketDetail("🟢 Active (10)", "App is in the foreground, active user interactions, or clicked from notification. Zero background restrictions.")
+                        BucketDetail("🟡 Working Set (20)", "App is used frequently/daily. Minor job execution delays (~2 min window).")
+                        BucketDetail("🟠 Frequent (30)", "App is used regularly (every few days). Stricter restrictions on background jobs, alarms, and FCM messages.")
+                        BucketDetail("🔴 Rare (40)", "App is used occasionally. Max 10 min job window per 24 hours. Network access deferred in deep sleep.")
+                        BucketDetail("❌ Restricted (45)", "Rarely or never used, or battery abuse detected. Maximum restrictions: all jobs & alarms deferred, no background network access.")
+                    }
+                }
+            }
+
+            // Developer ADB Testing Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "🛠 Developer Testing (ADB)",
+                        text = "🛠 Developer Testing via ADB",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "You can manually change the bucket of this app to test restricted behaviors:",
+                        text = "To test transitions, manually set the standby bucket via ADB terminal:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -219,7 +260,7 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
                     }
 
                     Text(
-                        text = "To query the bucket via ADB:",
+                        text = "To query current bucket:",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -245,17 +286,70 @@ fun StandbyTrackerScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun BulletPoint(text: String) {
+private fun HistoryRowItem(record: StandbyBucketRecord) {
+    val color = getBucketColor(record.bucketName)
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("•", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(color.copy(alpha = 0.2f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = record.bucketName,
+                        fontWeight = FontWeight.Bold,
+                        color = color,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Text(
+                    text = record.formattedTime,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Text(
+                text = "Trigger: ${record.triggerReason}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (record.durationInPreviousBucketMs > 0) {
+                val durationSec = record.durationInPreviousBucketMs / 1000
+                val durationText = if (durationSec > 60) "${durationSec / 60}m ${durationSec % 60}s" else "${durationSec}s"
+                Text(
+                    text = "Prior bucket duration: $durationText",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun getBucketColor(bucketName: String): Color {
+    return when {
+        bucketName.contains("Active", ignoreCase = true) -> MaterialTheme.colorScheme.primary
+        bucketName.contains("Working Set", ignoreCase = true) -> MaterialTheme.colorScheme.secondary
+        bucketName.contains("Frequent", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary
+        bucketName.contains("Rare", ignoreCase = true) || bucketName.contains("Restricted", ignoreCase = true) -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.outline
     }
 }
 

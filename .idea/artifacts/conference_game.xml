@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="conference-game">
+    <output-path>$PROJECT_DIR$/conference-game/build/libs</output-path>
+    <root id="archive" name="conference-game.jar">
+      <element id="module-output" name="DevControls.conference-game.androidMain" />
+    </root>
+  </artifact>
+</component>

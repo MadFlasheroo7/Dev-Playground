@@ -33,6 +33,7 @@ class DevControlsApp : Application() {
         DevSettingsRepository.get(this).registerWidgetRefresh()
         AdbEndpointDiscoverer.get(this).start()
         WidgetRefresher(this).start()
+        pro.jayeshseth.devcontrols.data.StandbyBucketTracker.init(this)
 
         // Auto-start Privacy Glow HUD if enabled
         MainScope().launch {

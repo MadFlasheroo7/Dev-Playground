@@ -70,6 +70,11 @@ import pro.jayeshseth.devcontrols.ui.AdbConsoleScreen
 import pro.jayeshseth.devcontrols.ui.A11yCloakScreen
 import pro.jayeshseth.devcontrols.ui.A11yDetectionScreen
 import pro.jayeshseth.devcontrols.ui.AdbDetectionScreen
+import pro.jayeshseth.devcontrols.ui.IntentForgeScreen
+import pro.jayeshseth.devcontrols.ui.ContentProviderProbeScreen
+import pro.jayeshseth.devcontrols.ui.KeystoreAttestationScreen
+import pro.jayeshseth.devcontrols.ui.LogcatStreamerScreen
+import pro.jayeshseth.devcontrols.ui.AppOpsScreen
 import pro.jayeshseth.devcontrols.ui.FlowLearnerScreen
 import pro.jayeshseth.devcontrols.ui.RecompositionVisualizerScreen
 import pro.jayeshseth.devcontrols.ui.DispatcherVisualizerScreen
@@ -348,6 +353,7 @@ import pro.jayeshseth.devcontrols.ui.UsbInspectorScreen
 import pro.jayeshseth.devcontrols.ui.FocusCallsSection
 import pro.jayeshseth.devcontrols.ui.KioskTargetPickerScreen
 import pro.jayeshseth.devcontrols.ui.ButtonMapperScreen
+import pro.jayeshseth.devcontrols.ui.AudioStudioScreen
 import pro.jayeshseth.devcontrols.ui.AudioEffectsScreen
 import pro.jayeshseth.devcontrols.ui.MealPlannerScreen
 import pro.jayeshseth.devcontrols.ui.theme.DevControlsTheme
@@ -704,8 +710,16 @@ actual fun PlatformScreenHost(route: Route, onBack: () -> Unit) {
         Route.PRIVACY_GLOW -> PrivacyGlowScreen(onBack = onBack)
         Route.GAMEPAD_PLAYGROUND -> pro.jayeshseth.devcontrols.ui.gamepad.GamepadPlaygroundScreen(onBack = onBack)
         Route.BUTTON_MAPPER -> ButtonMapperScreen(onBack = onBack)
+        Route.AUDIO_STUDIO -> AudioStudioScreen(onBack = onBack)
         Route.AUDIO_EFFECTS -> AudioEffectsScreen(onBack = onBack)
         Route.MEAL_PLANNER -> MealPlannerScreen(onBack = onBack)
+        Route.LIVE_WALLPAPER -> pro.jayeshseth.devcontrols.ui.wallpaper.LiveWallpaperScreen(onBack = onBack)
+        Route.CHROMATIC_FERROFLUID -> pro.jayeshseth.devcontrols.ui.visualfx.ShaderEngineStudioScreen(onBack = onBack)
+        Route.INTENT_FORGE -> IntentForgeScreen(onBack = onBack)
+        Route.CONTENT_PROVIDER_PROBE -> ContentProviderProbeScreen(onBack = onBack)
+        Route.KEYSTORE_ATTESTATION -> KeystoreAttestationScreen(onBack = onBack)
+        Route.LOGCAT_STREAMER -> LogcatStreamerScreen(onBack = onBack)
+        Route.APPOPS_CONSOLE -> AppOpsScreen(onBack = onBack)
         else -> {}
     }
 }
